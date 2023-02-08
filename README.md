@@ -8,6 +8,7 @@
 npm i
 cp config.dev.json config.json
 # or cp config.prod.json config.json
+# create wallet.json, holding number array private key
 ```
 
 ## Test
