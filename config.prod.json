@@ -1,0 +1,18 @@
+{
+    "network": "mainnet",
+    "endpoint": "https://mainnet.infura.io/v3",
+    "refExchange": "bybit",
+    "lockingIntervalMs": 3000,
+    "markPriceStaleIntervalMs": 5000,
+    "webServerPort": 85,
+    "notifications": {
+      "telegramToken": "xxx",
+      "telegramChatId": "yyy"
+    },
+    "assets": [
+      { "gainsTicker": "BTC", "refTicker": "BTC/USDT:USDT" },
+      { "gainsTicker": "ETH", "refTicker": "ETH/USDT:USDT" },
+      { "gainsTicker": "SOL", "refTicker": "SOL/USDT:USDT" },
+      { "gainsTicker": "APT", "refTicker": "APT/USDT:USDT" }
+    ]
+}

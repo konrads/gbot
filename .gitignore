@@ -1,0 +1,6 @@
+.DS_Store
+node_modules
+config.json
+wallet.json
+restart-cnt.txt
+*.bk

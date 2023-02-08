@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "network": {"type": "string", "enum": ["testnet", "mainnet"]},
+    "endpoint": {"type": "string"},
+    "refExchange": {"type": "string"},
+    "lockingIntervalMs": {"type": "integer", "minimum": 0},
+    "markPriceStaleIntervalMs": {"type": "integer", "minimum": 0},
+    "webServerPort": {"type": "integer"},
+    "notifications": {"$ref": "#/definitions/NotificationDetails"},
+    "assets": {
+      "type": "array",
+      "items": [{"$ref": "#/definitions/Asset"}]
+    }
+  },
+  "required": ["network", "endpoint", "refExchange", "lockingIntervalMs", "markPriceStaleIntervalMs", "assets"],
+  "definitions": {
+    "NotificationDetails": {
+      "type": "object",
+      "properties": {
+        "telegramToken": {"type": "string"},
+        "telegramChatId": {"type": "string"}
+      },
+      "additionalProperties": false,
+      "required": ["telegramToken", "telegramChatId"]
+    },
+    "Asset": {
+      "type": "object",
+      "properties": {
+        "gainsTicker": {"type": "string"},
+        "refTicker": {"type": "string"}
+      },
+      "required": ["gainsTicker", "refTicker"]
+    }
+  }
+}

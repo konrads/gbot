@@ -1,0 +1,31 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: "16.6.0"
+
+jobs:
+  build:
+    name: Build program and test
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        name: Get npm cache directory
+        with:
+          path: |
+            ~/.npm/
+            **/node_modules/
+          key: npm-${{ runner.os }}-v0000-${{ hashFiles('**/package.json') }}
+      - name: Install deps
+        run: npm i
+      - name: Test
+        run: npm test

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="{{refresh}}">
+    <title>GBot dashboard</title>
+    <style>
+        table, th, td { border: 1px solid black; border-collapse: collapse; }
+        .currency { color: black; }
+        .cash { color: blue; }
+        .base { color: black; }
+    </style>
+</head>
+<body>
+    <h2>Assets</h2>
+    <table>
+        <tr><th></th>{{#each assets}}<th><strong>{{asset}}</strong></th>{{/each}}</tr>
+        <tr><td><strong>Mark</strong></td>{{#each assets}}<td><div class="currency">{{currency price}}</div></td>{{/each}}</tr>
+        <tr><td><strong>Updated</strong></td>{{#each assets}}<td>{{priceTs}}</td>{{/each}}</tr>
+        <tr><td><strong>Base</strong></td>{{#each assets}}<td><div class="base">{{positionBase}}</div></td>{{/each}}</tr>
+        <tr><td><strong>Cash</strong></td>{{#each assets}}<td><div class="cash">{{positionCash}}</div></td>{{/each}}</tr>
+    </table>
+
+    <br></br>
+    *Network: {{network}}
+    <br></br>
+    *Timestamped @ {{now}}, refreshed every {{refresh}}s
+</body>
+</html>
