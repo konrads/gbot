@@ -20,6 +20,12 @@
         <tr><td><strong>Cash</strong></td>{{#each assets}}<td><div class="cash">{{positionCash}}</div></td>{{/each}}</tr>
     </table>
 
+    <h2>Orders</h2>
+    <table>
+        <tr><th><strong>Ts</strong></th><th><strong>Order</strong></th></tr>{{#each orders}}
+        <tr><td>{{ts}}</td><td>{{order}}</td>{{/each}}</tr>{{/each}}
+    </table>
+
     <br></br>
     *Network: {{network}}
     <br></br>

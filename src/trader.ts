@@ -12,7 +12,7 @@ export class Trader {
     this.refExchange = new ccxt.pro[refExchange]();
   }
 
-  async sendOrders(order: Order): Promise<string> {
+  async sendOrder(order: Order): Promise<string> {
     throw new Error("Unimplemented!!!");
   }
 

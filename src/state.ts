@@ -1,9 +1,11 @@
-import { Price } from "./types";
+import { Order, Price } from "./types";
 
 export class State {
-  private prices: Map<string, Price> = new Map();
-  private positions: Map<string, number> = new Map();
-  private assetz: string[];
+  private readonly prices: Map<string, Price> = new Map();
+  private readonly positions: Map<string, number> = new Map();
+  private readonly assetz: string[];
+  private readonly ordersByClientOrderId: Map<number, Order> = new Map();
+  private readonly tsOrders: [number, Order][] = [];
 
   constructor(assets: string[]) {
     this.assetz = assets;
@@ -33,5 +35,16 @@ export class State {
 
   getPosition(asset: string): number {
     return this.positions.get(asset);
+  }
+
+  setOrder(order: Order) {
+    if (order.status == "issued") {
+      this.tsOrders.push([Date.now(), order]);
+    }
+    this.ordersByClientOrderId.set(order.clientOrderId, order);
+  }
+
+  get orders(): [number, Order][] {
+    return this.tsOrders;
   }
 }

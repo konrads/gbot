@@ -1,4 +1,5 @@
 import ajv from "ajv";
+import { Wallet } from "ethers";
 
 export interface Notifications {
   telegramToken: string;
@@ -19,12 +20,13 @@ export interface Config {
   webServerPort: number;
   notifications?: Notifications;
   assets: Asset[];
-  wallet?: number[];
+  monitoredTrader: string;
+  wallet: Wallet;
 }
 
 export function loadConfig(): Config {
   const config: Config = require("../config.json");
-  config.wallet = require("../wallet.json");
+  config.wallet = new Wallet(require("../wallet.json"));
   validateSchema(config, require("../config.schema.json"));
   return config;
 }

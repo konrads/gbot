@@ -18,7 +18,7 @@ async function main() {
         type: cmdts.number,
         long: "waitSec",
         short: "w",
-        defaultValue: () => 60, // 1m
+        defaultValue: () => 60,
       }),
     },
     handler: async ({ waitSec }) => {
@@ -47,7 +47,6 @@ async function main() {
     },
   });
 
-  // setup and run
   const cmd = cmdts.subcommands({
     name: "cmd",
     cmds: {
@@ -59,5 +58,4 @@ async function main() {
   await cmdts.run(cmd, process.argv.slice(2));
 }
 
-// FIXME: not auto-exiting, unsure what makes it hang around.
 main().then((_) => process.exit(0));

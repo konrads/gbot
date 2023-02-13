@@ -36,6 +36,10 @@ export function startExpress(config: Config, state: State) {
           positionCash,
         };
       }),
+      orders: state.orders.map(([ts, order]): [string, string] => [
+        new Date(ts).toLocaleString(),
+        JSON.stringify(order),
+      ]),
     };
     res.render("dashboard", ctx);
   });

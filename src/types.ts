@@ -11,4 +11,5 @@ export interface Order {
   amount: number;
   clientOrderId: number;
   orderId?: number; // populated once back from exchange
+  status?: "issued" | "placed" | "cancelled" | "filled";
 }

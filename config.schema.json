@@ -12,9 +12,10 @@
     "assets": {
       "type": "array",
       "items": [{"$ref": "#/definitions/Asset"}]
-    }
+    },
+    "monitoredTrader": {"type": "string"}
   },
-  "required": ["network", "endpoint", "refExchange", "lockingIntervalMs", "markPriceStaleIntervalMs", "assets"],
+  "required": ["network", "endpoint", "refExchange", "lockingIntervalMs", "markPriceStaleIntervalMs", "assets", "monitoredTrader"],
   "definitions": {
     "NotificationDetails": {
       "type": "object",

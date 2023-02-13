@@ -14,5 +14,6 @@
       { "gainsTicker": "ETH", "refTicker": "ETH/USDT:USDT" },
       { "gainsTicker": "SOL", "refTicker": "SOL/USDT:USDT" },
       { "gainsTicker": "APT", "refTicker": "APT/USDT:USDT" }
-    ]
+    ],
+    "monitoredTrader": "pubkey-yyy"
 }
