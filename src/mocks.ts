@@ -41,20 +41,22 @@ export class MockExchange {
   ) => Promise<void>;
   private state: State;
   private orders: Order[] = [];
-  private positions: Map<string, number> = new Map();
   private assets: string[];
+  private myPubkey: string;
   private tick: number = 0;
 
   constructor(
     state: State,
     monitoredTrader: string,
     params: MockParams,
-    assets: string[]
+    assets: string[],
+    myPubkey: string
   ) {
     this.state = state;
     this.monitoredTrader = monitoredTrader;
     this.params = params;
     this.assets = assets;
+    this.myPubkey = myPubkey;
   }
 
   initialize(
@@ -69,7 +71,7 @@ export class MockExchange {
   }
 
   refresh() {
-    log.info(`mock tick ${this.tick}`);
+    log.debug(`mock tick ${this.tick}`);
     const shouldCloseOrders = this.tick % this.params.fillCancelTrigger == 0;
     if (shouldCloseOrders) {
       const newStatus =
@@ -85,6 +87,12 @@ export class MockExchange {
           newStatus == "filled" ? "orderFilled" : "orderCancelled",
           x
         );
+        if (newStatus == "filled" && x.owner == this.myPubkey) {
+          const position =
+            (this.state.getPosition(x.asset) ?? 0) +
+            (x.dir == "buy" ? x.amount : -x.amount);
+          this.state.setPosition(x.asset, position);
+        }
       });
     }
     const shouldIssueOtherTraderOrders =

@@ -33,7 +33,8 @@ async function main() {
       state,
       config.monitoredTrader,
       config.mockParams,
-      config.assets.map((x) => x.gainsTicker)
+      config.assets.map((x) => x.gainsTicker),
+      config.wallet.publicKey
     );
   const trader = config.mockParams
     ? new MockTrader(realTrader, mockExchange)
@@ -42,7 +43,7 @@ async function main() {
   const orchestrator = new Orchestrator(config, state, trader, notifier);
   await orchestrator.initialize();
   if (mockExchange) {
-    await sleep(1000); // allow price warmup
+    await sleep(2000); // allow price warmup
     mockExchange.initialize((ownerPubkey: string, eventType: EventType, data) =>
       orchestrator.handleEvent(ownerPubkey, eventType, data)
     );

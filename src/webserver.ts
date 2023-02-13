@@ -6,11 +6,11 @@ import { State } from "./state";
 import { toFixed } from "./utils";
 
 export function startExpress(config: Config, state: State) {
-  hbs.handlebars.registerHelper("currency", function (cash: number) {
-    return `$${toFixed(cash, 2)}`;
+  hbs.handlebars.registerHelper("cash", function (amount: number) {
+    return amount ? `$${toFixed(amount, 2)}` : "";
   });
-  hbs.handlebars.registerHelper("baseAmount", function (cash: number) {
-    return `${toFixed(cash, 5)}`;
+  hbs.handlebars.registerHelper("base", function (amount: number) {
+    return amount ? toFixed(amount, 5) : "";
   });
 
   const expressApp = express();
@@ -22,6 +22,7 @@ export function startExpress(config: Config, state: State) {
       now: new Date().toLocaleString(),
       refresh: req.query.refresh ?? 10,
       network: config.network,
+      pnl: state.pnl,
 
       assets: state.assets.map((asset) => {
         const price = state.getPrice(asset);
