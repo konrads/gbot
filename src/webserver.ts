@@ -36,10 +36,12 @@ export function startExpress(config: Config, state: State) {
           positionCash,
         };
       }),
-      orders: state.orders.map(([ts, order]): [string, string] => [
-        new Date(ts).toLocaleString(),
-        JSON.stringify(order),
-      ]),
+      orders: state.orders.map(([ts, order]) => {
+        return {
+          ts: new Date(ts).toLocaleString(),
+          order: `${order.asset}: ${order.dir} ${order.amount} @ ${order.price}: ${order.status}, ${order.clientOrderId}`,
+        };
+      }),
     };
     res.render("dashboard", ctx);
   });

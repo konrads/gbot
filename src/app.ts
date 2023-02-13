@@ -1,13 +1,15 @@
 #!ts-node
 
 import { loadConfig } from "./configuration";
-import { bumpRestartCount, schedule } from "./utils";
+import { bumpRestartCount, schedule, sleep } from "./utils";
 import { startExpress } from "./webserver";
 import { log } from "./log";
 import { Orchestrator } from "./orchestrator";
 import { Notifier } from "./notifications";
 import { State } from "./state";
 import { Trader } from "./trader";
+import { MockExchange, MockTrader } from "./mocks";
+import { EventType } from "./types";
 
 async function main() {
   const config = loadConfig();
@@ -18,13 +20,33 @@ async function main() {
 • lockingIntervalMs:         ${config.lockingIntervalMs}
 • webServerPort:             ${config.webServerPort}
 • assets:                    ${JSON.stringify(config.assets)}
+• mockParams:                ${
+    config.mockParams ? JSON.stringify(config.mockParams) : "--"
+  }
 `);
   const assets = config.assets.map(({ gainsTicker }) => gainsTicker);
   const state = new State(assets);
-  const trader = new Trader(config.assets, config.refExchange);
+  const realTrader = new Trader(config.assets, config.refExchange);
+  let mockExchange: MockExchange;
+  if (config.mockParams)
+    mockExchange = new MockExchange(
+      state,
+      config.monitoredTrader,
+      config.mockParams,
+      config.assets.map((x) => x.gainsTicker)
+    );
+  const trader = config.mockParams
+    ? new MockTrader(realTrader, mockExchange)
+    : realTrader;
   const notifier = new Notifier(config.notifications);
   const orchestrator = new Orchestrator(config, state, trader, notifier);
   await orchestrator.initialize();
+  if (mockExchange) {
+    await sleep(1000); // allow price warmup
+    mockExchange.initialize((ownerPubkey: string, eventType: EventType, data) =>
+      orchestrator.handleEvent(ownerPubkey, eventType, data)
+    );
+  }
 
   const die = async (reason: string) => {
     log.info(`Shutting down due to ${reason}`);

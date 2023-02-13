@@ -5,6 +5,7 @@
     "network": {"type": "string", "enum": ["testnet", "mainnet"]},
     "endpoint": {"type": "string"},
     "refExchange": {"type": "string"},
+    "mockParams": {"$ref": "#/definitions/MockParams"},
     "lockingIntervalMs": {"type": "integer", "minimum": 0},
     "markPriceStaleIntervalMs": {"type": "integer", "minimum": 0},
     "webServerPort": {"type": "integer"},
@@ -33,6 +34,16 @@
         "refTicker": {"type": "string"}
       },
       "required": ["gainsTicker", "refTicker"]
+    },
+    "MockParams": {
+      "type": "object",
+      "properties": {
+        "fillCancelTrigger": {"type": "integer", "minimum": 0},
+        "fillCancelPerc": {"type": "number", "minimum": 0, "maximum": 1},
+        "otherTraderTrigger": {"type": "integer", "minimum": 0},
+        "otherTraderPerc": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "required": ["fillCancelTrigger", "fillCancelPerc", "otherTraderTrigger", "otherTraderPerc"]
     }
   }
 }

@@ -5,7 +5,7 @@ export class State {
   private readonly positions: Map<string, number> = new Map();
   private readonly assetz: string[];
   private readonly ordersByClientOrderId: Map<number, Order> = new Map();
-  private readonly tsOrders: [number, Order][] = [];
+  private readonly tsOrders: [number, number][] = [];
 
   constructor(assets: string[]) {
     this.assetz = assets;
@@ -38,13 +38,16 @@ export class State {
   }
 
   setOrder(order: Order) {
-    if (order.status == "issued") {
-      this.tsOrders.push([Date.now(), order]);
+    if ((order.status ?? "issued") == "issued") {
+      this.tsOrders.push([Date.now(), order.clientOrderId]);
     }
     this.ordersByClientOrderId.set(order.clientOrderId, order);
   }
 
   get orders(): [number, Order][] {
-    return this.tsOrders;
+    return this.tsOrders.map(([ts, clientOrderId]) => [
+      ts,
+      this.ordersByClientOrderId.get(clientOrderId),
+    ]);
   }
 }

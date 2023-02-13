@@ -2,6 +2,12 @@ import { Order } from "./types";
 import ccxt from "ccxt";
 import { Asset } from "./configuration";
 
+export interface ITrader {
+  sendOrder(order: Order): Promise<void>;
+  subscribeMarkPrices(callback: (string, number) => void);
+  shutdown();
+}
+
 export class Trader {
   private assets: Asset[];
   private refExchange: ccxt.ExchangePro;
@@ -12,7 +18,7 @@ export class Trader {
     this.refExchange = new ccxt.pro[refExchange]();
   }
 
-  async sendOrder(order: Order): Promise<string> {
+  async sendOrder(order: Order): Promise<void> {
     throw new Error("Unimplemented!!!");
   }
 

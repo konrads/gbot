@@ -84,3 +84,8 @@ export function bumpRestartCount(): number {
   fs.writeFileSync(restartsCntFilename, "" + restartCnt);
   return restartCnt;
 }
+
+export function randomVal<T>(arr: T[]): T {
+  const ind = Math.floor(Math.random() * arr.length);
+  return arr[ind];
+}

@@ -1,6 +1,6 @@
 .DS_Store
 node_modules
 config.json
-wallet.json
+wallet.txt
 restart-cnt.txt
 *.bk

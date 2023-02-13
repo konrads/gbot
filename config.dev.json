@@ -2,6 +2,7 @@
     "network": "testnet",
     "endpoint": "https://testnet.infura.io/v3",
     "refExchange": "bybit",
+    "useMocks": true,
     "lockingIntervalMs": 3000,
     "markPriceStaleIntervalMs": 5000,
     "webServerPort": 85,
@@ -15,5 +16,11 @@
       { "gainsTicker": "SOL", "refTicker": "SOL/USDT:USDT" },
       { "gainsTicker": "APT", "refTicker": "APT/USDT:USDT" }
     ],
-    "monitoredTrader": "pubkey-xxx"
+    "monitoredTrader": "monitored-pubkey",
+    "mockParams": {
+      "fillCancelTrigger": 2,
+      "fillCancelPerc": 0.9,
+      "otherTraderTrigger": 5,
+      "otherTraderPerc": 0.8
+    }
 }

@@ -1,5 +1,6 @@
 import ajv from "ajv";
 import { Wallet } from "ethers";
+import * as fs from "fs";
 
 export interface Notifications {
   telegramToken: string;
@@ -13,6 +14,7 @@ export interface Asset {
 
 export interface Config {
   network: "devnet" | "mainnet";
+  mockParams?: MockParams;
   endpoint: string;
   refExchange: string;
   lockingIntervalMs: number;
@@ -24,9 +26,17 @@ export interface Config {
   wallet: Wallet;
 }
 
+export interface MockParams {
+  fillCancelTrigger: number;
+  fillCancelPerc: number;
+  otherTraderTrigger: number;
+  otherTraderPerc: number;
+}
+
 export function loadConfig(): Config {
   const config: Config = require("../config.json");
-  config.wallet = new Wallet(require("../wallet.json"));
+  const walletPrivKey = fs.readFileSync("./wallet.txt", "utf8");
+  config.wallet = new Wallet(walletPrivKey);
   validateSchema(config, require("../config.schema.json"));
   return config;
 }

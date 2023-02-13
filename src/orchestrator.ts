@@ -3,16 +3,16 @@
 import { Config } from "./configuration";
 import { State } from "./state";
 import { Notifier } from "./notifications";
-import { Trader } from "./trader";
+import { ITrader } from "./trader";
 import { log } from "./log";
 import { LockedRunner } from "./lock";
 import { idCreator } from "./utils";
-import { Order } from "./types";
+import { EventType, Order } from "./types";
 
 export class Orchestrator {
   private config: Config;
   private state: State;
-  private trader: Trader;
+  private trader: ITrader;
   private notifier: Notifier;
   private assets: string[];
   private lockedRunner: LockedRunner;
@@ -21,7 +21,7 @@ export class Orchestrator {
   constructor(
     config: Config,
     state: State,
-    trader: Trader,
+    trader: ITrader,
     notifier: Notifier
   ) {
     this.config = config;
@@ -45,15 +45,7 @@ export class Orchestrator {
     });
   }
 
-  async handleEvent(
-    ownerPubkey: string,
-    eventType:
-      | "orderPlaced"
-      | "orderCancelled"
-      | "orderFilled"
-      | "positionUpdate",
-    data
-  ) {
+  async handleEvent(ownerPubkey: string, eventType: EventType, data) {
     const myPublicKey = this.config.wallet.publicKey;
     function createOrder(
       status: "issued" | "placed" | "cancelled" | "filled"
@@ -61,6 +53,8 @@ export class Orchestrator {
       return {
         asset: data.asset,
         dir: data.dir,
+        owner: data.owner,
+        price: data.price,
         amount: data.amount,
         clientOrderId: data.clientOrderId,
         orderId: data.orderId,
@@ -71,15 +65,25 @@ export class Orchestrator {
       // record my order status/position
       switch (eventType) {
         case "orderPlaced":
-          this.state.setOrder(createOrder("placed"));
+          const o1 = createOrder("placed");
+          this.state.setOrder(o1);
+          log.info(`order received ${eventType}: ${JSON.stringify(o1)}`);
+          this.notifier.publish(`Copy trade placed: ${o1}`);
           break;
         case "orderCancelled":
-          this.state.setOrder(createOrder("cancelled"));
+          const o2 = createOrder("cancelled");
+          this.state.setOrder(o2);
+          log.info(`order received ${eventType}: ${JSON.stringify(o2)}`);
+          this.notifier.publish(`Copy trade cancelled: ${o2}`);
           break;
         case "orderFilled":
-          this.state.setOrder(createOrder("filled"));
+          const o3 = createOrder("filled");
+          this.state.setOrder(o3);
+          log.info(`order received ${eventType}: ${JSON.stringify(o3)}`);
+          this.notifier.publish(`Copy trade filled: ${o3}`);
           break;
         case "positionUpdate":
+          log.info(`position received: ${JSON.stringify(data)}`);
           this.state.setPosition(data.asset, data.size);
           break;
       }
@@ -93,10 +97,13 @@ export class Orchestrator {
         asset: data.asset,
         dir: data.dir,
         amount,
+        price: data.price,
+        owner: this.config.wallet.publicKey,
         clientOrderId: this.idCreate(),
       };
       await this.trader.sendOrder(orderCopy);
-      this.state.setOrder(createOrder("issued"));
+      this.state.setOrder(orderCopy);
+      log.info(`monitored order copy: ${JSON.stringify(orderCopy)}`);
     }
   }
 }

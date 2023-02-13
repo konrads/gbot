@@ -15,5 +15,5 @@
       { "gainsTicker": "SOL", "refTicker": "SOL/USDT:USDT" },
       { "gainsTicker": "APT", "refTicker": "APT/USDT:USDT" }
     ],
-    "monitoredTrader": "pubkey-yyy"
+    "monitoredTrader": "monitored-pubkey"
 }
