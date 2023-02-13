@@ -68,19 +68,25 @@ export class Orchestrator {
           const o1 = createOrder("placed");
           this.state.setOrder(o1);
           log.info(`order received ${eventType}: ${JSON.stringify(o1)}`);
-          this.notifier.publish(`Copy trade placed: ${o1}`);
+          this.notifier.publish(
+            `Copy trade placed: ${o1.asset} ${o1.dir}: ${o1.amount} @ ${o1.price} (clientOrderId: ${o1.clientOrderId})`
+          );
           break;
         case "orderCancelled":
           const o2 = createOrder("cancelled");
           this.state.setOrder(o2);
           log.info(`order received ${eventType}: ${JSON.stringify(o2)}`);
-          this.notifier.publish(`Copy trade cancelled: ${o2}`);
+          this.notifier.publish(
+            `Copy trade cancelled: ${o2.asset} ${o2.dir}: ${o2.amount} @ ${o2.price} (clientOrderId: ${o2.clientOrderId})`
+          );
           break;
         case "orderFilled":
           const o3 = createOrder("filled");
           this.state.setOrder(o3);
           log.info(`order received ${eventType}: ${JSON.stringify(o3)}`);
-          this.notifier.publish(`Copy trade filled: ${o3}`);
+          this.notifier.publish(
+            `Copy trade filled: ${o3.asset} ${o3.dir}: ${o3.amount} @ ${o3.price} (clientOrderId: ${o3.clientOrderId})`
+          );
           break;
         case "positionUpdate":
           log.info(`position received: ${JSON.stringify(data)}`);
