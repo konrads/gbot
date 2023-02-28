@@ -10,27 +10,25 @@ const PRIVATE_KEY = "";
 // Polygon
 // const DAI_ADDRESS = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
 // const STORAGE_ADDRESS = "0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD";
+//const provider = new ethers.WebSocketProvider("wss://polygon.llamarpc.com");
+
+// Mumbai Testnet
+const DAI_ADDRESS = "0x04b2a6e51272c82932ecab31a5ab5ac32ae168c3";
+const STORAGE_ADDRESS = "0x4d2df485c608aa55a23d8d98dd2b4fa24ba0f2cf";
+const provider = new ethers.WebSocketProvider("wss://polygon-mumbai.g.alchemy.com/v2/US6ybgcQC9-FpHhr0TOiBN35NKYH18r5");
 
 // Arbitrum
-const DAI_ADDRESS = "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1";
-const STORAGE_ADDRESS = "0xcFa6ebD475d89dB04cAd5A756fff1cb2BC5bE33c";
+//const DAI_ADDRESS = "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1";
+//const STORAGE_ADDRESS = "0xcFa6ebD475d89dB04cAd5A756fff1cb2BC5bE33c";
+//const provider = new ethers.WebSocketProvider("wss://arb-mainnet.g.alchemy.com/v2/BnencMGjoPsmbRIjrDZvh4zLTmlZyDtG");
 
-
-let tradingAddress; // polygon: 0x65187FeC6eCc4774C1f632C7503466D5B4353Db1
+let tradingAddress;
 let tradingContract;
 
 let priceAggregatorAddress;
 
-// for read operations can use provider
-//polygon
-//const provider = new ethers.WebSocketProvider("wss://polygon.llamarpc.com");
-//arbitrum
-const provider = new ethers.WebSocketProvider("wss://arb-mainnet.g.alchemy.com/v2/BnencMGjoPsmbRIjrDZvh4zLTmlZyDtG");
-
 // for write operations have to use signer
 const signer = new ethers.Wallet(PRIVATE_KEY, provider);
-
-console.log("provider", provider);
 
 const pairList = ['btc','eth','link', 'doge', 'matic', 'ada', 'sushi', 'aave', 'algo', 'bat', 'comp', 'dot', 'eos', 'ltc', 'mana', 'omg', 'snx', 'uni', 'xlm', 'xrp', 'zec',
 'audusd', 'eurchf', 'eurgbp', 'eurjpy', 'eurusd', 'gbpusd', 'nzdusd', 'usdcad', 'usdchf', 'usdjpy', 
@@ -56,7 +54,7 @@ let run = async function() {
 	console.log("balance gas MATIC/ETH", ethers.formatEther(balance));
 
 	let allowance = await daiContract.allowance(PUBLIC_KEY, STORAGE_ADDRESS);
-	console.log("allowance", ethers.formatEther(allowance));
+	console.log("allowance", allowance);
 	if(allowance == 0){
 		console.log("approving more...");
 		let res = await daiContract.approve(STORAGE_ADDRESS, "1000000000000000000000000000000");
@@ -101,7 +99,7 @@ let run = async function() {
 		let openPrice = 16229300000000 ; //have to give current price,
 		// together with slippageP will fail the trade if price moves too much out
 		// 1641 plus 10 decimals
-		let buy = true;
+		let buy = true; //false for short selling , gotta update takeProfit target & stoploss if any
 		let leverage = 20;
 		let takeProfit = 31186790000000;
 		let stopLoss = 0; // e.g. 15885500000000
