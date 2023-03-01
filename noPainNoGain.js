@@ -89,10 +89,11 @@ let run = async function() {
 		}
 	}
 
-	if(openTradesCount == 0){
+	if(openTradesCount < 3){
 		//do one trade
 		//https://arbiscan.io/tx/0xa23b2592babb49e9c29cab7bc9d3c39d1b4e7aff89aed3a896775c4106a46edc
 
+		//looks like this index is not used, i tried different values
 		let index = 0;
 		let initialPosToken = 0;
 		let positionSizeDai = ethers.parseEther("400"); //DAI 400000000000000000000
@@ -126,17 +127,32 @@ let run = async function() {
 		console.log(orderType, spreadReductionId, slippageP, referrer);
 		let res = await tradingContract.openTrade(tuple, orderType, spreadReductionId, slippageP, referrer);
 		console.log("placing order hash...", res.hash);
+		//Wait for the transaction to be mined
+		let receipt = await res.wait();
+		//console.log(receipt);
+		if(receipt.status == 1) {
+			//status: 1 -> Success
+			//add to open positions
+			console.log("success");
+		}
 
 	}
 
 
-	if(openTradesCount == 1){
-		//close trade
+	if(openTradesCount == 3){
+		console.log("close trade");
 		//https://arbiscan.io/tx/0x4d897fed0f6be0917254240aea7d659a3d243c7fb2e7034f458968faa74ec9c1
 
+		//index in open orders array
 		let index = 0;
 		let res = await tradingContract.closeTradeMarket(pairIndex, index);
 		console.log("closing order hash...", res.hash);
+		let receipt = await res.wait();
+		//console.log(receipt);
+		if(receipt.status == 1){
+			console.log("success");
+			//remove from open positions
+		}
 		//https://polygonscan.com/tx/0xa64cd6e841fe2431a81ec168114416f6b9e96c3457faeb2ea5b97d296ff5bbbb
 	}
 
