@@ -16,10 +16,6 @@ export interface Order {
   status?: Status;
 }
 
-export type EventType =
-  | "orderPlaced"
-  | "orderCancelled"
-  | "orderFilled"
-  | "positionUpdate";
+export type EventType = "orderPlaced" | "orderCancelled" | "orderFilled" | "positionUpdate";
 
 export type Status = "issued" | "placed" | "cancelled" | "filled";

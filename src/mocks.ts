@@ -34,24 +34,14 @@ export class MockTrader {
 export class MockExchange {
   private monitoredTrader: string;
   private params: MockParams;
-  private handleEvent: (
-    ownerPubkey: string,
-    eventType: EventType,
-    data
-  ) => Promise<void>;
+  private handleEvent: (ownerPubkey: string, eventType: EventType, data) => Promise<void>;
   private state: State;
   private orders: Order[] = [];
   private assets: string[];
   private myPubkey: string;
   private tick: number = 0;
 
-  constructor(
-    state: State,
-    monitoredTrader: string,
-    params: MockParams,
-    assets: string[],
-    myPubkey: string
-  ) {
+  constructor(state: State, monitoredTrader: string, params: MockParams, assets: string[], myPubkey: string) {
     this.state = state;
     this.monitoredTrader = monitoredTrader;
     this.params = params;
@@ -59,9 +49,7 @@ export class MockExchange {
     this.myPubkey = myPubkey;
   }
 
-  initialize(
-    handler: (ownerPubkey: string, eventType: EventType, data) => Promise<void>
-  ) {
+  initialize(handler: (ownerPubkey: string, eventType: EventType, data) => Promise<void>) {
     this.handleEvent = handler;
     setInterval(() => this.refresh(), 1000); // refresh every sec
   }
@@ -74,34 +62,23 @@ export class MockExchange {
     log.debug(`mock tick ${this.tick}`);
     const shouldCloseOrders = this.tick % this.params.fillCancelTrigger == 0;
     if (shouldCloseOrders) {
-      const newStatus =
-        Math.random() < this.params.fillCancelPerc ? "filled" : "cancelled";
+      const newStatus = Math.random() < this.params.fillCancelPerc ? "filled" : "cancelled";
       const closables = this.orders.filter((x) => {
         const status = x.status ?? "issued";
         return status != "filled" && status != "cancelled";
       });
       closables.forEach((x) => {
         x.status = newStatus;
-        this.handleEvent(
-          x.owner,
-          newStatus == "filled" ? "orderFilled" : "orderCancelled",
-          x
-        );
+        this.handleEvent(x.owner, newStatus == "filled" ? "orderFilled" : "orderCancelled", x);
         if (newStatus == "filled" && x.owner == this.myPubkey) {
-          const position =
-            (this.state.getPosition(x.asset) ?? 0) +
-            (x.dir == "buy" ? x.amount : -x.amount);
+          const position = (this.state.getPosition(x.asset) ?? 0) + (x.dir == "buy" ? x.amount : -x.amount);
           this.state.setPosition(x.asset, position);
         }
       });
     }
-    const shouldIssueOtherTraderOrders =
-      this.tick % this.params.otherTraderTrigger == 0;
+    const shouldIssueOtherTraderOrders = this.tick % this.params.otherTraderTrigger == 0;
     if (shouldIssueOtherTraderOrders) {
-      const trader =
-        Math.random() < this.params.otherTraderPerc
-          ? this.monitoredTrader
-          : "other-trader-pubkey";
+      const trader = Math.random() < this.params.otherTraderPerc ? this.monitoredTrader : "other-trader-pubkey";
       const asset = randomVal(this.assets);
       const order = {
         asset,

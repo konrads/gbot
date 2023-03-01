@@ -1,20 +1,9 @@
 import fs from "fs";
+import { GasPriceOracle } from "gas-price-oracle";
+import { EstimatedGasPrice } from "gas-price-oracle/lib/services";
 
 export function toDDMMMYY(date: Date): string {
-  const months = [
-    `JAN`,
-    `FEB`,
-    `MAR`,
-    `APR`,
-    `MAY`,
-    `JUN`,
-    `JUL`,
-    `AUG`,
-    `SEP`,
-    `OCT`,
-    `NOV`,
-    `DEC`,
-  ];
+  const months = [`JAN`, `FEB`, `MAR`, `APR`, `MAY`, `JUN`, `JUL`, `AUG`, `SEP`, `OCT`, `NOV`, `DEC`];
   let dd = date.getDate() >= 10 ? `${date.getDate()}` : `0${date.getDate()}`;
   let mmm = months[date.getMonth()];
   let yy = `${date.getFullYear()}`.slice(2);
@@ -88,4 +77,17 @@ export function bumpRestartCount(): number {
 export function randomVal<T>(arr: T[]): T {
   const ind = Math.floor(Math.random() * arr.length);
   return arr[ind];
+}
+
+export async function getGasPrice(): Promise<EstimatedGasPrice> {
+  const oracle = new GasPriceOracle({ chainId: 137 }); // Polygon
+  return await oracle.eip1559.estimateFees({
+    maxFeePerGas: 20,
+    maxPriorityFeePerGas: 3,
+    baseFee: undefined,
+  });
+}
+
+export function range(n: number): number[] {
+  return [...Array(n).keys()];
 }

@@ -18,11 +18,9 @@ async function main() {
 • endpoint:                  ${config.endpoint}
 • refExchange:               ${config.refExchange}
 • lockingIntervalMs:         ${config.lockingIntervalMs}
-• webServerPort:             ${config.webServerPort}
+• webServerPort:             ${config.webServerPort} 
 • assets:                    ${JSON.stringify(config.assets)}
-• mockParams:                ${
-    config.mockParams ? JSON.stringify(config.mockParams) : "--"
-  }
+• mockParams:                ${config.mockParams ? JSON.stringify(config.mockParams) : "--"}
 `);
   const assets = config.assets.map(({ gainsTicker }) => gainsTicker);
   const state = new State(assets);
@@ -34,19 +32,15 @@ async function main() {
       config.monitoredTrader,
       config.mockParams,
       config.assets.map((x) => x.gainsTicker),
-      config.wallet.publicKey
+      config.wallet.address
     );
-  const trader = config.mockParams
-    ? new MockTrader(realTrader, mockExchange)
-    : realTrader;
+  const trader = config.mockParams ? new MockTrader(realTrader, mockExchange) : realTrader;
   const notifier = new Notifier(config.notifications);
   const orchestrator = new Orchestrator(config, state, trader, notifier);
   await orchestrator.initialize();
   if (mockExchange) {
     await sleep(2000); // allow price warmup
-    mockExchange.initialize((ownerPubkey: string, eventType: EventType, data) =>
-      orchestrator.handleEvent(ownerPubkey, eventType, data)
-    );
+    mockExchange.initialize((ownerPubkey: string, eventType: EventType, data) => orchestrator.handleEvent(ownerPubkey, eventType, data));
   }
 
   const die = async (reason: string) => {
@@ -63,25 +57,13 @@ async function main() {
       const priceAndTs = state.getPrice(asset);
       return [asset, priceAndTs?.price, now - priceAndTs?.ts.getTime()];
     });
-    const stale = assetPriceAge.filter(
-      ([_1, _2, age]) => age > config.markPriceStaleIntervalMs
-    );
+    const stale = assetPriceAge.filter(([_1, _2, age]) => age > config.markPriceStaleIntervalMs);
     if (stale.length > 0)
       await die(
         `stale mark prices
-${stale
-  .map(
-    ([asset, ts, age]) =>
-      `- ${asset}, lastUpdated: ${ts.toLocaleString()}, age: ${age}ms`
-  )
-  .join(`\n`)}`
+${stale.map(([asset, ts, age]) => `- ${asset}, lastUpdated: ${ts.toLocaleString()}, age: ${age}ms`).join(`\n`)}`
       );
-    else
-      log.debug(
-        `stale mark price check success: ${assetPriceAge.map(
-          ([asset, _, age]) => JSON.stringify({ asset, age })
-        )}`
-      );
+    else log.debug(`stale mark price check success: ${assetPriceAge.map(([asset, _, age]) => JSON.stringify({ asset, age }))}`);
   }, config.markPriceStaleIntervalMs);
 
   const restartCnt = await bumpRestartCount();

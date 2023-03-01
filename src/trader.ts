@@ -31,8 +31,7 @@ export class Trader {
           const bidSize = orderbook.bids[0][1];
           const askPrice = orderbook.asks[0][0];
           const askSize = orderbook.asks[0][1];
-          const fairPrice =
-            (bidPrice * bidSize + askPrice * askSize) / (bidSize + askSize);
+          const fairPrice = (bidPrice * bidSize + askPrice * askSize) / (bidSize + askSize);
           callback(gainsTicker, fairPrice);
         }
       }

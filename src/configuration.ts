@@ -46,10 +46,5 @@ export function validateSchema(config: any, configSchema: any) {
   configSchema["$schema"] = undefined;
   const validate = ajvInst.compile(configSchema);
   const valid = validate(config) as boolean;
-  if (!valid)
-    throw new Error(
-      `Failed to validate config due to errors ${JSON.stringify(
-        validate.errors
-      )}`
-    );
+  if (!valid) throw new Error(`Failed to validate config due to errors ${JSON.stringify(validate.errors)}`);
 }

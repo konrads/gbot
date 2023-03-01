@@ -27,8 +27,7 @@ export function startExpress(config: Config, state: State) {
       assets: state.assets.map((asset) => {
         const price = state.getPrice(asset);
         const positionBase = state.getPosition(asset);
-        const positionCash =
-          positionBase && price ? positionBase * price.price : undefined;
+        const positionCash = positionBase && price ? positionBase * price.price : undefined;
         return {
           asset,
           price: price?.price,
@@ -47,7 +46,5 @@ export function startExpress(config: Config, state: State) {
     res.render("dashboard", ctx);
   });
 
-  expressApp.listen(config.webServerPort, () =>
-    log.info(`Express server started at port ${config.webServerPort}`)
-  );
+  expressApp.listen(config.webServerPort, () => log.info(`Express server started at port ${config.webServerPort}`));
 }

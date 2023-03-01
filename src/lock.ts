@@ -23,13 +23,8 @@ export class LockedRunner {
     );
   }
 
-  async runExclusive<T>(
-    lockId: string,
-    onDelay: "reject" | "wait" | "proceed",
-    run: () => Promise<T>
-  ): Promise<[T, boolean]> {
-    if (!this.lockIds.includes(lockId))
-      throw new Error(`Unrecognized lockId ${lockId}`);
+  async runExclusive<T>(lockId: string, onDelay: "reject" | "wait" | "proceed", run: () => Promise<T>): Promise<[T, boolean]> {
+    if (!this.lockIds.includes(lockId)) throw new Error(`Unrecognized lockId ${lockId}`);
 
     const that = this;
     async function decoratedRun(): Promise<[T, boolean]> {
@@ -38,44 +33,29 @@ export class LockedRunner {
       if (delayTs > 0)
         switch (onDelay) {
           case "wait":
-            log.debug(
-              `Waiting ${delayTs}ms for lock ${lockId} (lastRunTs ${lastRunTs})`
-            );
+            log.debug(`Waiting ${delayTs}ms for lock ${lockId} (lastRunTs ${lastRunTs})`);
             await sleep(delayTs);
-            log.debug(
-              `Done with the wait for ${delayTs}ms for lock ${lockId} (lastRunTs ${lastRunTs})`
-            );
+            log.debug(`Done with the wait for ${delayTs}ms for lock ${lockId} (lastRunTs ${lastRunTs})`);
             break;
           case "reject":
-            log.debug(
-              `Rejecting operation under lock ${lockId}, unlock period is ${delayTs}ms in the future (lastRunTs ${lastRunTs})`
-            );
+            log.debug(`Rejecting operation under lock ${lockId}, unlock period is ${delayTs}ms in the future (lastRunTs ${lastRunTs})`);
             return [undefined, false];
           case "proceed":
-            log.debug(
-              `Proceeding on operation under lock ${lockId} despite delay ${delayTs}ms (lastRunTs ${lastRunTs})`
-            );
+            log.debug(`Proceeding on operation under lock ${lockId} despite delay ${delayTs}ms (lastRunTs ${lastRunTs})`);
             break;
         }
-      else
-        log.debug(
-          `No delay on lock ${lockId}, executing (lastRunTs ${lastRunTs})`
-        );
+      else log.debug(`No delay on lock ${lockId}, executing (lastRunTs ${lastRunTs})`);
 
       const res = await run();
       const finishTs = Date.now();
-      log.debug(
-        `Finished execution on lock ${lockId} @ (lastRunTs ${lastRunTs}, finishTs ${finishTs})`
-      );
+      log.debug(`Finished execution on lock ${lockId} @ (lastRunTs ${lastRunTs}, finishTs ${finishTs})`);
       that.lastRuns.set(lockId, finishTs);
       return [res, true];
     }
     const lock = this.locks.get(lockId);
     if (onDelay == "reject" && lock.isLocked()) {
       // premature rejection, not even entering the mutex lock
-      log.debug(
-        `Rejecting operation under lock ${lockId}, not attempting the mutex await`
-      );
+      log.debug(`Rejecting operation under lock ${lockId}, not attempting the mutex await`);
       return [undefined, false];
     }
     return await lock.runExclusive(decoratedRun);
