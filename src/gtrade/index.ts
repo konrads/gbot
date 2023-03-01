@@ -113,6 +113,10 @@ export class GTrade {
     let buy = dir == "buy";
     if (takeProfit) takeProfit = takeProfit * 10 ** 10;
     if (stopLoss) stopLoss = stopLoss * 10 ** 10;
+    if (slippage) slippage = slippage * 10 ** 12;
+
+    let orderType = 0;
+    let spreadReductionId = 0;
 
     let tuple = {
       trader: this.signer.address,
@@ -126,10 +130,6 @@ export class GTrade {
       tp: takeProfit,
       sl: stopLoss,
     };
-
-    let orderType = 0;
-    let spreadReductionId = 0;
-    if (slippage) slippage = slippage * 10 ** 12;
 
     let res = await (await this.getTradingContract()).openTrade(tuple, orderType, spreadReductionId, slippage, this.referrer);
     return res;
