@@ -88,8 +88,24 @@ async function main() {
 allowance:       ${await gtrade.getAllowance()}
 balance:         ${await gtrade.getBalance()}
 daiBalance:      ${await gtrade.getDaiBalance()}
-openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v]) => `${k}:${v}`)}
-`);
+openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v]) => `${k}:${v}`)}`);
+    },
+  });
+
+  const getOpenTrades = cmdts.command({
+    name: "getOpenTrades",
+    args: {
+      pair: cmdts.option({
+        type: cmdts.string,
+        long: "pair",
+        defaultValue: () => "btc",
+      }),
+    },
+    handler: async ({ pair }) => {
+      const config = loadConfig();
+      const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
+      const trades = await gtrade.getOpenTrades(pair);
+      console.log(`open trades:\n${trades.join("\n")}`);
     },
   });
 
@@ -100,7 +116,84 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
       const res = await gtrade.approveAllowance();
-      console.log(`approveAllowance response ${JSON.stringify(res)}`);
+      console.log(`approveAllowance hash ${res.hash}`);
+    },
+  });
+
+  const issueTrade = cmdts.command({
+    name: "issueTrade",
+    args: {
+      orderIndex: cmdts.option({
+        type: cmdts.number,
+        long: "orderIndex",
+        defaultValue: () => 0,
+      }),
+      pair: cmdts.option({
+        type: cmdts.string,
+        long: "pair",
+        defaultValue: () => "btc",
+      }),
+      size: cmdts.option({
+        type: cmdts.number,
+        long: "size",
+      }),
+      price: cmdts.option({
+        type: cmdts.number,
+        long: "price",
+      }),
+      slippage: cmdts.option({
+        type: cmdts.number,
+        long: "slippage",
+        defaultValue: () => 0,
+      }),
+      leverage: cmdts.option({
+        type: cmdts.number,
+        long: "leverage",
+        defaultValue: () => 1,
+      }),
+      dir: cmdts.option({
+        type: cmdts.string,
+        long: "dir",
+        defaultValue: () => "buy",
+      }),
+      takeProfit: cmdts.option({
+        type: cmdts.number,
+        long: "takeProfit",
+        defaultValue: () => undefined,
+      }),
+      stopLoss: cmdts.option({
+        type: cmdts.number,
+        long: "stopLoss",
+        defaultValue: () => undefined,
+      }),
+    },
+    handler: async ({ orderIndex, pair, size, price, slippage, leverage, dir, takeProfit, stopLoss }) => {
+      const config = loadConfig();
+      const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
+      const res = await gtrade.issueTrade(pair, orderIndex, size, price, slippage, leverage, dir as "buy" | "sell", takeProfit, stopLoss);
+      console.log(`issueTrade hash ${res.hash}`);
+    },
+  });
+
+  const closeTrade = cmdts.command({
+    name: "closeTrade",
+    args: {
+      orderIndex: cmdts.option({
+        type: cmdts.number,
+        long: "orderIndex",
+        defaultValue: () => 0,
+      }),
+      pair: cmdts.option({
+        type: cmdts.string,
+        long: "pair",
+        defaultValue: () => "btc",
+      }),
+    },
+    handler: async ({ orderIndex, pair }) => {
+      const config = loadConfig();
+      const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
+      const res = await gtrade.closeTrade(pair, orderIndex);
+      console.log(`closeTrade hash ${res.hash}`);
     },
   });
 
@@ -112,7 +205,10 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       watchGasPrices,
       showKeys,
       gTradeStats,
+      getOpenTrades,
       approveAllowance,
+      issueTrade,
+      closeTrade,
     },
   });
 

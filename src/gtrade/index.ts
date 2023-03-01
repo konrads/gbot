@@ -39,7 +39,7 @@ export class GTrade {
   private readonly daiContract: ethers.Contract;
   private readonly storageContract: ethers.Contract;
   private readonly provider: ethers.Provider;
-  private tradingContract: ethers.Contract;
+  private _tradingContract: ethers.Contract;
 
   constructor(privKey: string, chainSpec: ChainSpec, referrer: string = "0x0000000000000000000000000000000000000000") {
     this.chainSpec = chainSpec;
@@ -50,12 +50,12 @@ export class GTrade {
     this.storageContract = new ethers.Contract(chainSpec.storageAddress, STORAGE_ABI, this.signer);
   }
 
-  // can optimize with hardcoded addresses
-  async initialize() {
-    const tradingAddress = await this.storageContract.trading();
-    this.tradingContract = new ethers.Contract(tradingAddress, TRADING_ABI, this.signer);
-    // const priceAggregatorAddress = await this.storageContract.priceAggregator();
-    // this.priceAggregatorContract = new ethers.Contract(priceAggregatorAddress, PRICE_AGGREGATOR_ABI, this.signer);
+  private async getTradingContract(): Promise<ethers.Contract> {
+    if (!this._tradingContract) {
+      const tradingAddress = await this.storageContract.trading();
+      this._tradingContract = new ethers.Contract(tradingAddress, TRADING_ABI, this.signer);
+    }
+    return this._tradingContract;
   }
 
   async getBalance(): Promise<number> {
@@ -104,17 +104,15 @@ export class GTrade {
     return res;
   }
 
-  async issueTrade(orderIndex: number, pair: string, size: number, price: number, slippage: number, leverage: number, dir: "buy" | "sell", takeProfit?: number, stopLoss?: number): Promise<any> {
+  async issueTrade(pair: string, orderIndex: number, size: number, price: number, slippage: number, leverage: number, dir: "buy" | "sell", takeProfit?: number, stopLoss?: number): Promise<any> {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     let initialPosToken = 0;
-    let positionSizeDai = Math.round((size * 10) ^ 18); // ethers.parseEther("400"); //DAI 400000000000000000000
-    let openPrice = Math.round((price * 10) ^ 9); // 16229300000000; //have to give current price,
-    // together with slippageP will fail the trade if price moves too much out
-    // 1641 plus 10 decimals
-    let buy = dir == "buy"; //false for short selling , gotta update takeProfit target & stoploss if any
-    // takeProfit = 31186790000000;
-    // stopLoss = 0; // e.g. 15885500000000
+    let positionSizeDai = BigInt(size * 10 ** 18);
+    let openPrice = price * 10 ** 10;
+    let buy = dir == "buy";
+    if (takeProfit) takeProfit = takeProfit * 10 ** 10;
+    if (stopLoss) stopLoss = stopLoss * 10 ** 10;
 
     let tuple = {
       trader: this.signer.address,
@@ -127,23 +125,21 @@ export class GTrade {
       leverage,
       tp: takeProfit,
       sl: stopLoss,
-      // id: numeric
+      id: 123,
     };
 
     let orderType = 0;
     let spreadReductionId = 0;
-    if (slippage) slippage = Math.round((slippage * 10) ^ 12); // 10400000000; // - 1%
+    if (slippage) slippage = slippage * 10 ** 12;
 
-    console.log(tuple);
-    console.log(orderType, spreadReductionId, slippage, this.referrer);
-    let res = await this.tradingContract.openTrade(tuple, orderType, spreadReductionId, slippage, this.referrer);
-    console.log("placing order hash...", res.hash);
+    let res = await (await this.getTradingContract()).openTrade(tuple, orderType, spreadReductionId, slippage, this.referrer);
     return res;
   }
 
-  async closeOrder(pair: string, tradeInd: number): Promise<void> {
+  async closeTrade(pair: string, tradeInd: number): Promise<any> {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
-    await this.tradingContract.closeTradeMarket(pairIndex, tradeInd);
+    const res = await (await this.getTradingContract()).closeTradeMarket(pairIndex, tradeInd);
+    return res;
   }
 }

@@ -29,6 +29,14 @@ src/app.ts
 Manually test commands
 
 ```sh
+# infrastructure
 src/cli.ts watchPrices
 src/cli.ts publishNotification "test message"
+
+# gTrade specific
+src/cli.ts gTradeStats
+src/cli.ts issueTrade --pair btc --price 23388.8 --size 100 --leverage 20 --stopLoss 0 --takeProfit 23398 --slippage 0.01
+src/cli.ts issueTrade --pair eth --price 1641 --size 100 --leverage 20 --stopLoss 0 --takeProfit 1650 --slippage 0.01
+src/cli.ts getOpenTrades --pair eth
+src/cli.ts closeTrade --pair eth --orderIndex 0
 ```
