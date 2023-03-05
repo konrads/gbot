@@ -26,7 +26,7 @@ export function startExpress(config: Config, state: State) {
 
       assets: state.assets.map((asset) => {
         const price = state.getPrice(asset);
-        const positionBase = state.getPosition(asset);
+        const positionBase = state.openTrades.get(asset).amount;
         const positionCash = positionBase && price ? positionBase * price.price : undefined;
         return {
           asset,
@@ -36,10 +36,10 @@ export function startExpress(config: Config, state: State) {
           positionCash,
         };
       }),
-      orders: state.orders.map(([ts, order]) => {
+      orders: state.myTrades.map(([ts, order]) => {
         return {
           ts: new Date(ts).toLocaleString(),
-          order: `${order.asset}: ${order.dir} ${order.amount} @ ${order.price}: ${order.status}, ${order.clientOrderId}`,
+          order: `${order.symbol}: ${order.dir} ${order.amount} @ ${order.openPrice}: ${order.status}, ${order.clientTradeId}`,
         };
       }),
     };

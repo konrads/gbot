@@ -7,9 +7,10 @@ export interface Notifications {
   telegramChatId: string;
 }
 
-export interface Asset {
-  gainsTicker: string;
-  refTicker: string;
+export interface SymbolMapping {
+  symbol: string;
+  cashAmount: number;
+  leverage: number;
 }
 
 export interface Config {
@@ -21,16 +22,13 @@ export interface Config {
   markPriceStaleIntervalMs: number;
   webServerPort: number;
   notifications?: Notifications;
-  assets: Asset[];
+  symbolMappings: SymbolMapping[];
   monitoredTrader: string;
   wallet: Wallet;
 }
 
 export interface MockParams {
-  fillCancelTrigger: number;
-  fillCancelPerc: number;
-  otherTraderTrigger: number;
-  otherTraderPerc: number;
+  bogusTrader: string;
 }
 
 export function loadConfig(): Config {

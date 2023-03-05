@@ -3,19 +3,27 @@ export interface Price {
   ts: Date;
 }
 
-export type Dir = "buy" | "sell";
-
-export interface Order {
-  asset: string;
+export interface Trade {
+  symbol: Symbol;
   dir: Dir;
-  price: number;
+  openPrice: number;
   amount: number;
-  owner: string;
-  clientOrderId?: number;
-  orderId?: number; // populated once back from exchange
+  leverage: number;
+  owner: Address;
+  clientTradeId?: TradeId;
+  tradeId?: number; // populated once back from exchange
   status?: Status;
+  closePrice?: number;
 }
 
-export type EventType = "orderPlaced" | "orderCancelled" | "orderFilled" | "positionUpdate";
+export type EventType = "tradePlaced" | "tradeCancelled" | "tradeFilled" | "tradeClosed";
 
-export type Status = "issued" | "placed" | "cancelled" | "filled";
+export type Dir = "buy" | "sell";
+
+export type Status = "placed" | "cancelled" | "filled" | "closed";
+
+export type Address = string;
+
+export type Symbol = string;
+
+export type TradeId = number;

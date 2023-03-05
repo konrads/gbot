@@ -7,14 +7,14 @@ import { ITrader } from "./trader";
 import { log } from "./log";
 import { LockedRunner } from "./lock";
 import { idCreator } from "./utils";
-import { EventType, Order } from "./types";
+import { Address } from "./types";
 
 export class Orchestrator {
   private config: Config;
   private state: State;
   private trader: ITrader;
   private notifier: Notifier;
-  private assets: string[];
+  private symbols: string[];
   private lockedRunner: LockedRunner;
   private idCreate = idCreator(Date.now());
 
@@ -23,74 +23,85 @@ export class Orchestrator {
     this.notifier = notifier;
     this.state = state;
     this.trader = trader;
-    this.assets = Array.from(config.assets.map(({ gainsTicker }) => gainsTicker));
-    this.lockedRunner = new LockedRunner(config.lockingIntervalMs, this.assets);
+    this.symbols = Array.from(config.symbolMappings.map(({ symbol }) => symbol));
+    this.lockedRunner = new LockedRunner(config.lockingIntervalMs, this.symbols);
   }
 
   async initialize() {
     // Setup feeds
-    this.trader.subscribeMarkPrices((asset: string, price: number) => {
-      const oldPrice = this.state.getPrice(asset);
-      if (oldPrice?.price != price) log.debug(`Price update: ${asset}: ${price}`);
-      // set regardless for stale checker
-      this.state.setPrice(asset, price);
+    this.trader.subscribeEvents(async (address: Address, event: any) => {
+      await this.handleEvent(address, event);
     });
   }
 
-  async handleEvent(ownerPubkey: string, eventType: EventType, data) {
+  async handleEvent(ownerPubkey: string, event) {
     const myPublicKey = this.config.wallet.address;
-    function createOrder(status: "issued" | "placed" | "cancelled" | "filled"): Order {
-      return {
-        asset: data.asset,
-        dir: data.dir,
-        owner: data.owner,
-        price: data.price,
-        amount: data.amount,
-        clientOrderId: data.clientOrderId,
-        orderId: data.orderId,
-        status: status,
+    const openTrade = this.state.openTrades.get(event.asset);
+    const amount = this.config.symbolMappings.find(({ symbol }) => symbol == event.asset)?.cashAmount;
+    const leverage = this.config.symbolMappings.find(({ symbol }) => symbol == event.asset)?.leverage;
+
+    if (ownerPubkey == myPublicKey) {
+      const o = {
+        symbol: event.symbol,
+        dir: event.dir,
+        owner: event.owner,
+        openPrice: undefined,
+        closePrice: undefined,
+        amount: event.amount,
+        leverage: event.leverage,
+        clientTradeId: event.clientOrderId,
+        tradeId: event.tradeId,
+        status: event.status,
       };
-    }
-    if (myPublicKey == ownerPubkey) {
-      // record my order status/position
-      switch (eventType) {
-        case "orderPlaced":
-          const o1 = createOrder("placed");
-          this.state.setOrder(o1);
-          log.info(`order received ${eventType}: ${JSON.stringify(o1)}`);
-          this.notifier.publish(`Copy trade placed: ${o1.asset} ${o1.dir}: ${o1.amount} @ ${o1.price} (clientOrderId: ${o1.clientOrderId})`);
-          break;
-        case "orderCancelled":
-          const o2 = createOrder("cancelled");
-          this.state.setOrder(o2);
-          log.info(`order received ${eventType}: ${JSON.stringify(o2)}`);
-          this.notifier.publish(`Copy trade cancelled: ${o2.asset} ${o2.dir}: ${o2.amount} @ ${o2.price} (clientOrderId: ${o2.clientOrderId})`);
-          break;
-        case "orderFilled":
-          const o3 = createOrder("filled");
-          this.state.setOrder(o3);
-          log.info(`order received ${eventType}: ${JSON.stringify(o3)}`);
-          this.notifier.publish(`Copy trade filled: ${o3.asset} ${o3.dir}: ${o3.amount} @ ${o3.price} (clientOrderId: ${o3.clientOrderId})`);
-          break;
-        case "positionUpdate":
-          log.info(`position received: ${JSON.stringify(data)}`);
-          this.state.setPosition(data.asset, data.size);
-          break;
+
+      if (!openTrade?.status && event.status == "placed") {
+        // record new trade
+        o.status = "placed";
+        this.state.setTrade(o);
+        await this.notifier.publish(`My trade placed: ${JSON.stringify(o)}`);
+      } else if (openTrade.status == "placed" && event.status == "filled") {
+        // fill
+        o.openPrice = event.price;
+        o.status = "filled";
+        this.state.setTrade(o);
+        await this.notifier.publish(`My trade filled: ${JSON.stringify(o)}`);
+      } else if (openTrade.status == "placed" && event.status == "cancelled") {
+        // cancel
+        o.status = "cancelled";
+        this.state.setTrade(o);
+        await this.notifier.publish(`My trade cancelled: ${JSON.stringify(o)}`);
+      } else if (openTrade.status == "filled" && event.status == "closed") {
+        // close
+        o.closePrice = event.price;
+        o.status = "closed";
+        this.state.setTrade(o);
+        await this.notifier.publish(`My trade closed: ${JSON.stringify(o)}`);
+      } else {
+        log.warn(`Unexpected event ${JSON.stringify(event)} for current trade ${openTrade}`);
       }
-    } else if (this.config.monitoredTrader == ownerPubkey && eventType == "orderFilled") {
-      // copy trade
-      const amount = data.amount; // FIXME, should set our own amounts
-      const orderCopy = {
-        asset: data.asset,
-        dir: data.dir,
-        amount,
-        price: data.price,
-        owner: this.config.wallet.address,
-        clientOrderId: this.idCreate(),
-      };
-      await this.trader.sendOrder(orderCopy);
-      this.state.setOrder(orderCopy);
-      log.info(`monitored order copy: ${JSON.stringify(orderCopy)}`);
+    } else if (ownerPubkey == this.config.monitoredTrader) {
+      if (!openTrade && event.status == "filled") {
+        // issue a new trade
+        const tradeCopy = {
+          symbol: event.symbol,
+          dir: event.dir,
+          amount,
+          leverage,
+          openPrice: event.price,
+          owner: myPublicKey,
+          clientOrderId: this.idCreate(),
+        };
+        await this.trader.createTrade(tradeCopy);
+        this.state.setTrade(tradeCopy);
+      } else if (openTrade && event.status == "cancelled") {
+        // issue trade cancel
+        await this.trader.cancelTrade(event.clientTradeId);
+      } else if (openTrade && event.status == "closed") {
+        // issue trade close
+        await this.trader.closeTrade(event.clientTradeId);
+      }
+    } else {
+      log.info(`Ignoring event from unknown trader ${ownerPubkey}: ${JSON.stringify(event)}`);
     }
   }
 }

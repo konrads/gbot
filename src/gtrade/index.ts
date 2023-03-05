@@ -129,6 +129,7 @@ export class GTrade {
       leverage,
       tp: takeProfit,
       sl: stopLoss,
+      id: 123,
     };
 
     let res = await (await this.getTradingContract()).openTrade(tuple, orderType, spreadReductionId, slippage, this.referrer);

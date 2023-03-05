@@ -4,9 +4,8 @@
 
 import { MockParams } from "./configuration";
 import { log } from "./log";
-import { State } from "./state";
 import { Trader } from "./trader";
-import { Dir, EventType, Order, Status } from "./types";
+import { Address, Dir, Trade, Status, TradeId, Symbol } from "./types";
 import { randomVal } from "./utils";
 
 export class MockTrader {
@@ -18,12 +17,20 @@ export class MockTrader {
     this.mockExchange = mockExchange;
   }
 
-  async sendOrder(order: Order): Promise<void> {
-    return await this.mockExchange.registerOrder(order);
+  async createTrade(trade: Trade): Promise<void> {
+    return await this.mockExchange.createTrade(trade);
   }
 
-  async subscribeMarkPrices(callback: (string, number) => void) {
-    return await this.trader.subscribeMarkPrices(callback);
+  async cancelTrade(clientTradeId: TradeId): Promise<void> {
+    return await this.mockExchange.cancelTrade(clientTradeId);
+  }
+
+  async closeTrade(clientTradeId: TradeId): Promise<void> {
+    return await this.mockExchange.closeTrade(clientTradeId);
+  }
+
+  async subscribeEvents(callback: (address: Address, data: any) => Promise<void>): Promise<void> {
+    // return await this.mockExchange.subscribeEvents(callback);
   }
 
   async shutdown() {
@@ -33,65 +40,73 @@ export class MockTrader {
 
 export class MockExchange {
   private monitoredTrader: string;
-  private params: MockParams;
-  private handleEvent: (ownerPubkey: string, eventType: EventType, data) => Promise<void>;
-  private state: State;
-  private orders: Order[] = [];
-  private assets: string[];
+  private bogusTrader: string;
   private myPubkey: string;
-  private tick: number = 0;
+  private symbols: Symbol[];
+  private handleEvent: (ownerPubkey: string, data) => Promise<void>;
+  private tickCnt: number = 0;
+  private expTrade: Trade;
 
-  constructor(state: State, monitoredTrader: string, params: MockParams, assets: string[], myPubkey: string) {
-    this.state = state;
-    this.monitoredTrader = monitoredTrader;
-    this.params = params;
-    this.assets = assets;
+  constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, symbols: Symbol[]) {
     this.myPubkey = myPubkey;
+    this.monitoredTrader = monitoredTrader;
+    this.bogusTrader = mockParams.bogusTrader;
+    this.symbols = symbols;
   }
 
-  initialize(handler: (ownerPubkey: string, eventType: EventType, data) => Promise<void>) {
+  initialize(handler: (ownerPubkey: string, data) => Promise<void>) {
     this.handleEvent = handler;
-    setInterval(() => this.refresh(), 1000); // refresh every sec
+    setInterval(() => this.tick(), 1000); // refresh every sec
   }
 
-  async registerOrder(order: Order): Promise<void> {
-    this.orders.push(order);
+  createTrade(trade: Trade) {
+    this.expTrade = { ...trade, clientTradeId: this.tickCnt, status: "placed", owner: this.myPubkey };
   }
 
-  refresh() {
-    log.debug(`mock tick ${this.tick}`);
-    const shouldCloseOrders = this.tick % this.params.fillCancelTrigger == 0;
-    if (shouldCloseOrders) {
-      const newStatus = Math.random() < this.params.fillCancelPerc ? "filled" : "cancelled";
-      const closables = this.orders.filter((x) => {
-        const status = x.status ?? "issued";
-        return status != "filled" && status != "cancelled";
-      });
-      closables.forEach((x) => {
-        x.status = newStatus;
-        this.handleEvent(x.owner, newStatus == "filled" ? "orderFilled" : "orderCancelled", x);
-        if (newStatus == "filled" && x.owner == this.myPubkey) {
-          const position = (this.state.getPosition(x.asset) ?? 0) + (x.dir == "buy" ? x.amount : -x.amount);
-          this.state.setPosition(x.asset, position);
-        }
-      });
+  cancelTrade(tradeId: TradeId) {
+    if (tradeId == this.expTrade?.clientTradeId) this.expTrade = { ...this.expTrade, status: "cancelled" };
+    else log.warn(`Unexpected tradeId ${tradeId} to cancel, have expTrade ${JSON.stringify(this.expTrade)}`);
+  }
+
+  closeTrade(tradeId: TradeId) {
+    if (tradeId == this.expTrade?.clientTradeId) this.expTrade = { ...this.expTrade, status: "closed", closePrice: Math.round(Math.random() * 10_000) };
+    else log.warn(`Unexpected tradeId ${tradeId} to close, have expTrade ${JSON.stringify(this.expTrade)}`);
+  }
+
+  tick() {
+    log.debug(`mock tick ${this.tickCnt}`);
+    let rand = Math.random();
+    let template: Trade = {
+      symbol: randomVal(this.symbols),
+      dir: randomVal(["buy", "sell"]) as Dir,
+      owner: randomVal([this.myPubkey, this.monitoredTrader, this.bogusTrader]),
+      openPrice: Math.random() * 10_000,
+      amount: Math.round(Math.random() * 100),
+      leverage: Math.round(Math.random() * 10),
+      tradeId: this.tickCnt,
+      clientTradeId: this.tickCnt,
+      status: randomVal(["placed", "cancelled", "filled", "closed"]) as Status,
+    };
+
+    if (rand < 0.4) {
+      // issuing my trade as requested by client
+      if (this.expTrade.status == "placed" && Math.random() > 0.7) this.expTrade.status = "cancelled";
+      this.handleEvent(this.myPubkey, this.expTrade);
+      if (this.expTrade.status == "closed") this.expTrade = undefined;
+    } else if (rand > 0.4 && rand < 0.6) {
+      // issuing my trade with unknown ids
+      const myTrade = { ...template, owner: this.myPubkey, clientTradeId: 1_234_456 };
+      this.handleEvent(this.myPubkey, myTrade);
+    } else if (rand > 0.6 && rand < 0.8) {
+      // issuing random monitoredTrader event
+      const myTrade = { ...template, owner: this.monitoredTrader };
+      this.handleEvent(this.monitoredTrader, myTrade);
+    } else if (rand > 0.8) {
+      const myTrade = { ...template, owner: this.bogusTrader };
+      this.handleEvent(this.bogusTrader, myTrade);
+    } else {
+      throw new Error(`wtf ${rand}???`);
     }
-    const shouldIssueOtherTraderOrders = this.tick % this.params.otherTraderTrigger == 0;
-    if (shouldIssueOtherTraderOrders) {
-      const trader = Math.random() < this.params.otherTraderPerc ? this.monitoredTrader : "other-trader-pubkey";
-      const asset = randomVal(this.assets);
-      const order = {
-        asset,
-        dir: randomVal(["buy", "sell"]) as Dir,
-        owner: trader,
-        price: this.state.getPrice(asset)?.price,
-        amount: Math.random() * 10,
-        orderId: this.tick,
-        status: "filled" as Status,
-      };
-      this.registerOrder(order);
-      this.handleEvent(trader, "orderFilled", order);
-    }
-    this.tick += 1;
+    this.tickCnt += 1;
   }
 }

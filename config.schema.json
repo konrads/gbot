@@ -10,13 +10,13 @@
     "markPriceStaleIntervalMs": {"type": "integer", "minimum": 0},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
-    "assets": {
+    "symbolMappings": {
       "type": "array",
-      "items": [{"$ref": "#/definitions/Asset"}]
+      "items": [{"$ref": "#/definitions/SymbolMapping"}]
     },
     "monitoredTrader": {"type": "string"}
   },
-  "required": ["network", "endpoint", "refExchange", "lockingIntervalMs", "markPriceStaleIntervalMs", "assets", "monitoredTrader"],
+  "required": ["network", "endpoint", "refExchange", "lockingIntervalMs", "markPriceStaleIntervalMs", "symbolMappings", "monitoredTrader"],
   "definitions": {
     "NotificationDetails": {
       "type": "object",
@@ -27,23 +27,21 @@
       "additionalProperties": false,
       "required": ["telegramToken", "telegramChatId"]
     },
-    "Asset": {
+    "SymbolMapping": {
       "type": "object",
       "properties": {
-        "gainsTicker": {"type": "string"},
-        "refTicker": {"type": "string"}
+        "symbol": {"type": "string"},
+        "cashAmount": {"type": "number", "minimum": 0},
+        "leverage": {"type": "number", "minimum": 0}
       },
-      "required": ["gainsTicker", "refTicker"]
+      "required": ["symbol", "cashAmount", "leverage"]
     },
     "MockParams": {
       "type": "object",
       "properties": {
-        "fillCancelTrigger": {"type": "integer", "minimum": 0},
-        "fillCancelPerc": {"type": "number", "minimum": 0, "maximum": 1},
-        "otherTraderTrigger": {"type": "integer", "minimum": 0},
-        "otherTraderPerc": {"type": "number", "minimum": 0, "maximum": 1}
+        "bogusTrader": {"type": "string"}
       },
-      "required": ["fillCancelTrigger", "fillCancelPerc", "otherTraderTrigger", "otherTraderPerc"]
+      "required": ["bogusTrader"]
     }
   }
 }

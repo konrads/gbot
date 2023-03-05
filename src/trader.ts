@@ -1,41 +1,36 @@
-import { Order } from "./types";
-import ccxt from "ccxt";
-import { Asset } from "./configuration";
+import { Trade, Address, TradeId } from "./types";
+import { SymbolMapping } from "./configuration";
 
 export interface ITrader {
-  sendOrder(order: Order): Promise<void>;
-  subscribeMarkPrices(callback: (string, number) => void);
+  createTrade(order: Trade): Promise<void>;
+  cancelTrade(clientTradeId: TradeId): Promise<void>;
+  closeTrade(clientTradeId: TradeId): Promise<void>;
+  subscribeEvents(callback: (address: Address, data: any) => Promise<void>): Promise<void>;
   shutdown();
 }
 
 export class Trader {
-  private assets: Asset[];
-  private refExchange: ccxt.ExchangePro;
+  private symbols: SymbolMapping[];
   private isShuttingDown: boolean = false;
 
-  constructor(assets: Asset[], refExchange: string) {
-    this.assets = assets;
-    this.refExchange = new ccxt.pro[refExchange]();
+  constructor(symbols: SymbolMapping[]) {
+    this.symbols = symbols;
   }
 
-  async sendOrder(order: Order): Promise<void> {
-    throw new Error("Unimplemented!!!");
+  async createTrade(trade: Trade): Promise<void> {
+    throw new Error("createTrade unimplemented!!!");
   }
 
-  subscribeMarkPrices(callback: (string, number) => void) {
-    this.assets.forEach(async ({ gainsTicker, refTicker }) => {
-      while (!this.isShuttingDown) {
-        const orderbook = await this.refExchange.watchOrderBook(refTicker);
-        if (orderbook.bids.length > 0 && orderbook.asks.length > 0) {
-          const bidPrice = orderbook.bids[0][0];
-          const bidSize = orderbook.bids[0][1];
-          const askPrice = orderbook.asks[0][0];
-          const askSize = orderbook.asks[0][1];
-          const fairPrice = (bidPrice * bidSize + askPrice * askSize) / (bidSize + askSize);
-          callback(gainsTicker, fairPrice);
-        }
-      }
-    });
+  async cancelTrade(clientTradeId: TradeId): Promise<void> {
+    throw new Error("cancelTrade unimplemented!!!");
+  }
+
+  async closeTrade(clientTradeId: TradeId): Promise<void> {
+    throw new Error("closeTrade unimplemented!!!");
+  }
+
+  async subscribeEvents(callback: (address: Address, data: any) => Promise<void>): Promise<void> {
+    throw new Error("subscribeEvents unimplemented!!!");
   }
 
   async shutdown() {

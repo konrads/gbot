@@ -9,30 +9,27 @@ import { Notifier } from "./notifications";
 import { State } from "./state";
 import { Trader } from "./trader";
 import { MockExchange, MockTrader } from "./mocks";
-import { EventType } from "./types";
 
 async function main() {
   const config = loadConfig();
   log.info(`Starting Gbot with config:
 • network:                   ${config.network}
 • endpoint:                  ${config.endpoint}
-• refExchange:               ${config.refExchange}
 • lockingIntervalMs:         ${config.lockingIntervalMs}
 • webServerPort:             ${config.webServerPort} 
-• assets:                    ${JSON.stringify(config.assets)}
+• symbolMappings:            ${JSON.stringify(config.symbolMappings)}
 • mockParams:                ${config.mockParams ? JSON.stringify(config.mockParams) : "--"}
 `);
-  const assets = config.assets.map(({ gainsTicker }) => gainsTicker);
+  const assets = config.symbolMappings.map(({ symbol: gainsTicker }) => gainsTicker);
   const state = new State(assets);
-  const realTrader = new Trader(config.assets, config.refExchange);
+  const realTrader = new Trader(config.symbolMappings);
   let mockExchange: MockExchange;
   if (config.mockParams)
     mockExchange = new MockExchange(
-      state,
+      config.wallet.address,
       config.monitoredTrader,
       config.mockParams,
-      config.assets.map((x) => x.gainsTicker),
-      config.wallet.address
+      config.symbolMappings.map((x) => x.symbol)
     );
   const trader = config.mockParams ? new MockTrader(realTrader, mockExchange) : realTrader;
   const notifier = new Notifier(config.notifications);
@@ -40,7 +37,7 @@ async function main() {
   await orchestrator.initialize();
   if (mockExchange) {
     await sleep(2000); // allow price warmup
-    mockExchange.initialize((ownerPubkey: string, eventType: EventType, data) => orchestrator.handleEvent(ownerPubkey, eventType, data));
+    mockExchange.initialize((ownerPubkey: string, data) => orchestrator.handleEvent(ownerPubkey, data));
   }
 
   const die = async (reason: string) => {

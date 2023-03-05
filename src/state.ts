@@ -1,11 +1,11 @@
-import { Order, Price } from "./types";
+import { Trade, Price, TradeId, Symbol } from "./types";
 
 export class State {
   private readonly prices: Map<string, Price> = new Map();
-  private readonly positions: Map<string, number> = new Map();
   private readonly assetz: string[];
-  private readonly ordersByClientOrderId: Map<number, Order> = new Map();
-  private readonly tsOrders: [number, number][] = [];
+  private readonly myCurrentTradez: Map<Symbol, TradeId> = new Map();
+  private readonly tradesByClientTradeId: Map<TradeId, Trade> = new Map();
+  private readonly myTsTrades: [number, TradeId][] = [];
 
   constructor(assets: string[]) {
     this.assetz = assets;
@@ -16,8 +16,12 @@ export class State {
   }
 
   get pnl(): number {
-    return Array.from(this.positions.entries())
-      .map(([asset, size]) => size * (this.prices.get(asset)?.price ?? 0))
+    return this.myTrades
+      .filter(([_, trade]) => trade.status == "filled")
+      .map(([_, trade]) => {
+        const dirMult = trade.dir == "buy" ? 1 : -1;
+        return (trade.closePrice - trade.openPrice) * dirMult * trade.amount * trade.leverage;
+      })
       .reduce((x, y) => x + y, 0);
   }
 
@@ -29,25 +33,28 @@ export class State {
     return this.prices.get(asset);
   }
 
-  setPosition(asset: string, size: number) {
-    this.positions.set(asset, size);
-  }
-
-  getPosition(asset: string): number {
-    return this.positions.get(asset);
-  }
-
-  setOrder(order: Order) {
-    if ((order.status ?? "issued") == "issued") {
-      this.tsOrders.push([Date.now(), order.clientOrderId]);
+  setTrade(trade: Trade) {
+    if (trade.status == undefined) {
+      this.tradesByClientTradeId.set(trade.clientTradeId, trade);
+      this.myTsTrades.push([Date.now(), trade.clientTradeId]);
+      this.myCurrentTradez.set(trade.symbol, trade.clientTradeId);
+    } else if (trade.status == "placed" || trade.status == "cancelled") {
+      this.tradesByClientTradeId.get(trade.clientTradeId).status = trade.status;
+    } else if (trade.status == "filled") {
+      this.tradesByClientTradeId.get(trade.clientTradeId).openPrice = trade.openPrice;
+      this.tradesByClientTradeId.get(trade.clientTradeId).status = "filled";
+    } else if (trade.status == "closed") {
+      this.tradesByClientTradeId.get(trade.clientTradeId).closePrice = trade.closePrice;
+      this.tradesByClientTradeId.get(trade.clientTradeId).status = "closed";
+      this.myCurrentTradez.set(trade.symbol, undefined);
     }
-    this.ordersByClientOrderId.set(order.clientOrderId, order);
   }
 
-  get orders(): [number, Order][] {
-    return this.tsOrders.map(([ts, clientOrderId]) => [
-      ts,
-      this.ordersByClientOrderId.get(clientOrderId),
-    ]);
+  get openTrades(): Map<Symbol, Trade> {
+    return new Map([...this.myCurrentTradez.entries()].map(([asset, clientTradeId]) => [asset, this.tradesByClientTradeId.get(clientTradeId)]));
+  }
+
+  get myTrades(): [number, Trade][] {
+    return this.myTsTrades.map(([ts, clientTradeId]) => [ts, this.tradesByClientTradeId.get(clientTradeId)]);
   }
 }

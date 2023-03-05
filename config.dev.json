@@ -10,17 +10,14 @@
     "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
     "telegramChatId": "-873100380"
   },
-  "assets": [
-    { "gainsTicker": "BTC", "refTicker": "BTC/USDT:USDT" },
-    { "gainsTicker": "ETH", "refTicker": "ETH/USDT:USDT" },
-    { "gainsTicker": "SOL", "refTicker": "SOL/USDT:USDT" },
-    { "gainsTicker": "APT", "refTicker": "APT/USDT:USDT" }
+  "symbolMappings": [
+    { "symbol": "BTC", "tradeCashAmount": 100, "tradeLeverage": 15 },
+    { "symbol": "ETH", "tradeCashAmount": 100, "tradeLeverage": 15 },
+    { "symbol": "SOL", "tradeCashAmount": 100, "tradeLeverage": 15 },
+    { "symbol": "APT", "tradeCashAmount": 100, "tradeLeverage": 15 }
   ],
   "monitoredTrader": "monitored-pubkey",
   "mockParams": {
-    "fillCancelTrigger": 2,
-    "fillCancelPerc": 0.9,
-    "otherTraderTrigger": 5,
-    "otherTraderPerc": 0.8
+    "bogusTrader": "bogus-trader"
   }
 }
