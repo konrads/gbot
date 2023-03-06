@@ -35,10 +35,12 @@ export class Orchestrator {
   }
 
   async handleEvent(ownerPubkey: string, event) {
+    log.info(`Incoming event owned by ${ownerPubkey}: ${JSON.stringify(event)}`);
+
     const myPublicKey = this.config.wallet.address;
-    const openTrade = this.state.openTrades.get(event.asset);
-    const amount = this.config.symbolMappings.find(({ symbol }) => symbol == event.asset)?.cashAmount;
-    const leverage = this.config.symbolMappings.find(({ symbol }) => symbol == event.asset)?.leverage;
+    const openTrade = this.state.openTrades.get(event.symbol);
+    const amount = this.config.symbolMappings.find(({ symbol }) => symbol == event.symbol)?.cashAmount;
+    const leverage = this.config.symbolMappings.find(({ symbol }) => symbol == event.symbol)?.leverage;
 
     if (ownerPubkey == myPublicKey) {
       const o = {
@@ -59,18 +61,18 @@ export class Orchestrator {
         o.status = "placed";
         this.state.setTrade(o);
         await this.notifier.publish(`My trade placed: ${JSON.stringify(o)}`);
-      } else if (openTrade.status == "placed" && event.status == "filled") {
+      } else if (openTrade?.status == "placed" && event.status == "filled") {
         // fill
         o.openPrice = event.price;
         o.status = "filled";
         this.state.setTrade(o);
         await this.notifier.publish(`My trade filled: ${JSON.stringify(o)}`);
-      } else if (openTrade.status == "placed" && event.status == "cancelled") {
+      } else if (openTrade?.status == "placed" && event.status == "cancelled") {
         // cancel
         o.status = "cancelled";
         this.state.setTrade(o);
         await this.notifier.publish(`My trade cancelled: ${JSON.stringify(o)}`);
-      } else if (openTrade.status == "filled" && event.status == "closed") {
+      } else if (openTrade?.status == "filled" && event.status == "closed") {
         // close
         o.closePrice = event.price;
         o.status = "closed";

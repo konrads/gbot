@@ -11,18 +11,18 @@
     </style>
 </head>
 <body>
-    <h2>Assets</h2>
+    <h2>Symbols</h2>
     <table>
-        <tr><th></th>{{#each assets}}<th><strong>{{asset}}</strong></th>{{/each}}</tr>
-        <tr><td><strong>Mark</strong></td>{{#each assets}}<td><div class="currency">{{cash price}}</div></td>{{/each}}</tr>
-        <tr><td><strong>Updated</strong></td>{{#each assets}}<td>{{priceTs}}</td>{{/each}}</tr>
-        <tr><td><strong>Cash</strong></td>{{#each assets}}<td><div class="cash">{{cash positionCash}}</div></td>{{/each}}</tr>
+        <tr><th></th>{{#each symbol}}<th><strong>{{symbol}}</strong></th>{{/each}}</tr>
+        <tr><td><strong>Mark</strong></td>{{#each symbols}}<td><div class="currency">{{cash price}}</div></td>{{/each}}</tr>
+        <tr><td><strong>Updated</strong></td>{{#each symbols}}<td>{{priceTs}}</td>{{/each}}</tr>
+        <tr><td><strong>Cash</strong></td>{{#each symbols}}<td><div class="cash">{{cash positionCash}}</div></td>{{/each}}</tr>
     </table>
 
-    <h2>Orders</h2>
+    <h2>Trades</h2>
     <table>
-        <tr><th><strong>Ts</strong></th><th><strong>Order</strong></th></tr>{{#each orders}}
-        <tr><td>{{ts}}</td><td>{{order}}</td></tr>{{/each}}
+        <tr><th><strong>Ts</strong></th><th><strong>Trade</strong></th></tr>{{#each trades}}
+        <tr><td>{{ts}}</td><td>{{trade}}</td></tr>{{/each}}
     </table>
 
     <br></br>

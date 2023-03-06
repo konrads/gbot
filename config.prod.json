@@ -9,11 +9,11 @@
     "telegramToken": "xxx",
     "telegramChatId": "yyy"
   },
-  "assets": [
-    { "gainsTicker": "BTC", "refTicker": "BTC/USDT:USDT" },
-    { "gainsTicker": "ETH", "refTicker": "ETH/USDT:USDT" },
-    { "gainsTicker": "SOL", "refTicker": "SOL/USDT:USDT" },
-    { "gainsTicker": "APT", "refTicker": "APT/USDT:USDT" }
+  "symbolMappings": [
+    { "symbol": "BTC", "cashAmount": 100, "leverage": 15 },
+    { "symbol": "ETH", "cashAmount": 100, "leverage": 15 },
+    { "symbol": "SOL", "cashAmount": 100, "leverage": 15 },
+    { "symbol": "APT", "cashAmount": 100, "leverage": 15 }
   ],
   "monitoredTrader": "monitored-pubkey"
 }

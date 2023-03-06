@@ -20,8 +20,8 @@ async function main() {
 • symbolMappings:            ${JSON.stringify(config.symbolMappings)}
 • mockParams:                ${config.mockParams ? JSON.stringify(config.mockParams) : "--"}
 `);
-  const assets = config.symbolMappings.map(({ symbol: gainsTicker }) => gainsTicker);
-  const state = new State(assets);
+  const symbols = config.symbolMappings.map(({ symbol }) => symbol);
+  const state = new State(symbols);
   const realTrader = new Trader(config.symbolMappings);
   let mockExchange: MockExchange;
   if (config.mockParams)
@@ -50,17 +50,17 @@ async function main() {
   // stale price check
   schedule(async () => {
     const now = Date.now();
-    const assetPriceAge = assets.map((asset): [string, number, number] => {
-      const priceAndTs = state.getPrice(asset);
-      return [asset, priceAndTs?.price, now - priceAndTs?.ts.getTime()];
+    const symbolPriceAge = symbols.map((symbol): [string, number, number] => {
+      const priceAndTs = state.getPrice(symbol);
+      return [symbol, priceAndTs?.price, now - priceAndTs?.ts.getTime()];
     });
-    const stale = assetPriceAge.filter(([_1, _2, age]) => age > config.markPriceStaleIntervalMs);
+    const stale = symbolPriceAge.filter(([_1, _2, age]) => age > config.markPriceStaleIntervalMs);
     if (stale.length > 0)
       await die(
         `stale mark prices
-${stale.map(([asset, ts, age]) => `- ${asset}, lastUpdated: ${ts.toLocaleString()}, age: ${age}ms`).join(`\n`)}`
+${stale.map(([symbol, ts, age]) => `- ${symbol}, lastUpdated: ${ts.toLocaleString()}, age: ${age}ms`).join(`\n`)}`
       );
-    else log.debug(`stale mark price check success: ${assetPriceAge.map(([asset, _, age]) => JSON.stringify({ asset, age }))}`);
+    else log.debug(`stale mark price check success: ${symbolPriceAge.map(([symbol, _, age]) => JSON.stringify({ symbol, age }))}`);
   }, config.markPriceStaleIntervalMs);
 
   const restartCnt = await bumpRestartCount();

@@ -74,7 +74,7 @@ export class MockExchange {
   }
 
   tick() {
-    log.debug(`mock tick ${this.tickCnt}`);
+    log.info(`mock tick ${this.tickCnt}, expTrade: ${JSON.stringify(this.expTrade)}`);
     let rand = Math.random();
     let template: Trade = {
       symbol: randomVal(this.symbols),
@@ -90,9 +90,29 @@ export class MockExchange {
 
     if (rand < 0.4) {
       // issuing my trade as requested by client
-      if (this.expTrade.status == "placed" && Math.random() > 0.7) this.expTrade.status = "cancelled";
-      this.handleEvent(this.myPubkey, this.expTrade);
-      if (this.expTrade.status == "closed") this.expTrade = undefined;
+      if (this.expTrade) {
+        if (this.expTrade?.status == "placed") {
+          if (Math.random() < 0.7) {
+            this.expTrade.status = "filled";
+            log.info(`Progressing my trade to filled!`);
+            this.handleEvent(this.myPubkey, this.expTrade);
+          } else {
+            this.expTrade.status = "cancelled";
+            log.info(`Progressing my trade to cancelled!`);
+            this.handleEvent(this.myPubkey, this.expTrade);
+            this.expTrade = undefined;
+          }
+        } else if (this.expTrade?.status == "filled") {
+          this.expTrade.status = "closed";
+          log.info(`Progressing my trade to closed!`);
+          this.handleEvent(this.myPubkey, this.expTrade);
+          this.expTrade = undefined;
+        } else {
+          throw new Error(`Unexpected expTrade status: ${JSON.stringify(this.expTrade)}`);
+        }
+      } else {
+        log.info(`Have no expTrade, skipping...`);
+      }
     } else if (rand > 0.4 && rand < 0.6) {
       // issuing my trade with unknown ids
       const myTrade = { ...template, owner: this.myPubkey, clientTradeId: 1_234_456 };

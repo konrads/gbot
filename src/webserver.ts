@@ -24,12 +24,12 @@ export function startExpress(config: Config, state: State) {
       network: config.network,
       pnl: state.pnl,
 
-      assets: state.assets.map((asset) => {
-        const price = state.getPrice(asset);
-        const positionBase = state.openTrades.get(asset).amount;
+      symbols: state.symbols.map((symbol) => {
+        const price = state.getPrice(symbol);
+        const positionBase = state.openTrades.get(symbol).amount;
         const positionCash = positionBase && price ? positionBase * price.price : undefined;
         return {
-          asset,
+          symbol,
           price: price?.price,
           priceTs: price?.ts.toLocaleString(),
           positionBase,
