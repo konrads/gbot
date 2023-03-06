@@ -1,9 +1,6 @@
 {
   "network": "mainnet",
   "endpoint": "https://mainnet.infura.io/v3",
-  "refExchange": "bybit",
-  "lockingIntervalMs": 3000,
-  "markPriceStaleIntervalMs": 5000,
   "webServerPort": 85,
   "notifications": {
     "telegramToken": "xxx",

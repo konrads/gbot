@@ -2,7 +2,7 @@ import { Trade, Address, TradeId } from "./types";
 import { SymbolMapping } from "./configuration";
 
 export interface ITrader {
-  createTrade(order: Trade): Promise<void>;
+  createTrade(trade: Trade): Promise<void>;
   cancelTrade(clientTradeId: TradeId): Promise<void>;
   closeTrade(clientTradeId: TradeId): Promise<void>;
   subscribeEvents(callback: (address: Address, data: any) => Promise<void>): Promise<void>;

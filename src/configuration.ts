@@ -17,9 +17,6 @@ export interface Config {
   network: "devnet" | "mainnet";
   mockParams?: MockParams;
   endpoint: string;
-  refExchange: string;
-  lockingIntervalMs: number;
-  markPriceStaleIntervalMs: number;
   webServerPort: number;
   notifications?: Notifications;
   symbolMappings: SymbolMapping[];

@@ -4,10 +4,7 @@
   "properties": {
     "network": {"type": "string", "enum": ["testnet", "mainnet"]},
     "endpoint": {"type": "string"},
-    "refExchange": {"type": "string"},
     "mockParams": {"$ref": "#/definitions/MockParams"},
-    "lockingIntervalMs": {"type": "integer", "minimum": 0},
-    "markPriceStaleIntervalMs": {"type": "integer", "minimum": 0},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
     "symbolMappings": {
@@ -16,7 +13,7 @@
     },
     "monitoredTrader": {"type": "string"}
   },
-  "required": ["network", "endpoint", "refExchange", "lockingIntervalMs", "markPriceStaleIntervalMs", "symbolMappings", "monitoredTrader"],
+  "required": ["network", "endpoint", "symbolMappings", "monitoredTrader"],
   "definitions": {
     "NotificationDetails": {
       "type": "object",
