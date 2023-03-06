@@ -5,7 +5,6 @@ import { Orchestrator } from "../src/orchestrator";
 import { Notifier } from "../src/notifications";
 import { Trade, TradeId, Address } from "../src/types";
 import { Wallet } from "ethers";
-import { range } from "../src/utils";
 
 const wallet = new Wallet(Wallet.createRandom().privateKey);
 
@@ -92,7 +91,39 @@ describe("orchestrator", function () {
     assert.deepEqual([], events);
   });
 
-  it("monitored-trader-close", async function () {
+  it("monitored-trader-fill-cancel", async function () {
+    const trade1: Trade = {
+      symbol: "BTC",
+      dir: "sell",
+      openPrice: 20_000,
+      amount: 1000,
+      leverage: 100,
+      owner: monitoredTrader,
+      clientTradeId: undefined,
+      tradeId: 1000,
+      status: "filled",
+      closePrice: undefined,
+    };
+    const expTrade: Trade = {
+      amount: 100,
+      clientTradeId: 0,
+      dir: "sell",
+      leverage: 10,
+      openPrice: 20_000,
+      owner: wallet.address,
+      symbol: "BTC",
+    };
+
+    // ignore the second event
+    const { state, events } = await setup({ issuer: monitoredTrader, trade: trade1 }, { issuer: wallet.address, trade: { ...expTrade, status: "cancelled" } });
+
+    assert.deepEqual([{ event: "createTrade", trade: expTrade }], events);
+    assert.strictEqual(1, state.myTrades.length);
+    assert.deepEqual({ ...expTrade, status: "cancelled" }, state.myTrades[0][1]);
+    assert.deepEqual({ ...expTrade, status: "cancelled" }, state.openTrades.get("BTC"));
+  });
+
+  it("monitored-trader-fill-close", async function () {
     const trade1: Trade = {
       symbol: "BTC",
       dir: "sell",

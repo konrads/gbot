@@ -39,7 +39,7 @@ export class State {
       this.tradesByClientTradeId.set(trade.clientTradeId, trade);
       this.myTsTrades.push([Date.now(), trade.clientTradeId]);
       this.myCurrentTradez.set(trade.symbol, trade.clientTradeId);
-    } else if (registeredTrade && trade.status == "placed") {
+    } else if (registeredTrade && ["placed", "cancelled"].includes(trade.status)) {
       registeredTrade.status = trade.status;
     } else if (registeredTrade && trade.status == "filled") {
       registeredTrade.openPrice = trade.openPrice;
