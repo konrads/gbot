@@ -18,19 +18,19 @@ async function setup(...trades: { issuer: Address; trade: Trade }[]): Promise<{ 
     endpoint: "endpoint",
     webServerPort: 8085,
     notifications: undefined,
-    symbolMappings: [
+    assetMappings: [
       {
-        symbol: "BTC",
+        asset: "BTC",
         cashAmount: 100,
         leverage: 10,
       },
       {
-        symbol: "ETH",
+        asset: "ETH",
         cashAmount: 100,
         leverage: 10,
       },
       {
-        symbol: "SOL",
+        asset: "SOL",
         cashAmount: 100,
         leverage: 10,
       },
@@ -60,8 +60,8 @@ async function setup(...trades: { issuer: Address; trade: Trade }[]): Promise<{ 
   }
 
   let idCnt = 0;
-  const symbols = config.symbolMappings.map(({ symbol }) => symbol);
-  const state: State = new State(symbols);
+  const assets = config.assetMappings.map(({ asset }) => asset);
+  const state: State = new State(assets);
   const trader = new MockTrader();
   const notifier: Notifier = new Notifier(config.notifications!);
   const orchestrator = new Orchestrator(config, state, trader, notifier, () => idCnt++);
@@ -76,7 +76,7 @@ describe("orchestrator", function () {
     const { events } = await setup({
       issuer: bogusTrader,
       trade: {
-        symbol: "BTC",
+        asset: "BTC",
         dir: "buy",
         openPrice: 20_000,
         amount: 1000,
@@ -91,9 +91,9 @@ describe("orchestrator", function () {
     assert.deepEqual([], events);
   });
 
-  it("monitored-trader-fill-cancel", async function () {
+  it("monitored-fill_my-cancel", async function () {
     const trade1: Trade = {
-      symbol: "BTC",
+      asset: "BTC",
       dir: "sell",
       openPrice: 20_000,
       amount: 1000,
@@ -111,11 +111,15 @@ describe("orchestrator", function () {
       leverage: 10,
       openPrice: 20_000,
       owner: wallet.address,
-      symbol: "BTC",
+      asset: "BTC",
     };
 
     // ignore the second event
-    const { state, events } = await setup({ issuer: monitoredTrader, trade: trade1 }, { issuer: wallet.address, trade: { ...expTrade, status: "cancelled" } });
+    const { state, events } = await setup(
+      { issuer: monitoredTrader, trade: trade1 },
+      { issuer: wallet.address, trade: { ...expTrade, status: "cancelled" } },
+      { issuer: monitoredTrader, trade: { ...trade1, status: "closed" } } // should be ignored - already cancelled
+    );
 
     assert.deepEqual([{ event: "createTrade", trade: expTrade }], events);
     assert.strictEqual(1, state.myTrades.length);
@@ -123,9 +127,9 @@ describe("orchestrator", function () {
     assert.deepEqual({ ...expTrade, status: "cancelled" }, state.openTrades.get("BTC"));
   });
 
-  it("monitored-trader-fill-close", async function () {
+  it("monitored-fill_monitored-close", async function () {
     const trade1: Trade = {
-      symbol: "BTC",
+      asset: "BTC",
       dir: "sell",
       openPrice: 20_000,
       amount: 1000,
@@ -137,15 +141,6 @@ describe("orchestrator", function () {
       closePrice: undefined,
     };
     const trade2 = { ...trade1, tradeId: 1001 };
-    const trade3: Trade = { ...trade1, tradeId: 1002, status: "closed" }; // close on the same symbol, even with diff tradeId
-
-    // ignore the second event
-    const { state, events } = await setup(
-      { issuer: monitoredTrader, trade: trade1 },
-      { issuer: monitoredTrader, trade: trade2 },
-      { issuer: monitoredTrader, trade: trade3 }
-    );
-
     const expTrade: Trade = {
       amount: 100,
       clientTradeId: 0,
@@ -153,8 +148,19 @@ describe("orchestrator", function () {
       leverage: 10,
       openPrice: 20_000,
       owner: wallet.address,
-      symbol: "BTC",
+      asset: "BTC",
     };
+    const trade3: Trade = { ...trade1, tradeId: 1003, closePrice: 30_000, status: "closed" }; // close on the same asset, even with diff tradeId
+
+    // ignore the second event
+    const { state, events } = await setup(
+      { issuer: monitoredTrader, trade: trade1 },
+      { issuer: monitoredTrader, trade: trade2 }, // ignored
+      { issuer: wallet.address, trade: { ...expTrade, status: "filled" } },
+      { issuer: monitoredTrader, trade: trade3 },
+      { issuer: wallet.address, trade: { ...expTrade, closePrice: 35_000, status: "closed" } }
+    );
+
     assert.deepEqual(
       [
         { event: "createTrade", trade: expTrade },
@@ -163,7 +169,16 @@ describe("orchestrator", function () {
       events
     );
     assert.strictEqual(1, state.myTrades.length);
-    assert.deepEqual(expTrade, state.myTrades[0][1]);
-    assert.deepEqual(expTrade, state.openTrades.get("BTC"));
+    assert.deepEqual({ ...expTrade, status: "closed", closePrice: 35_000 }, state.myTrades[0][1]);
+    assert.deepEqual(undefined, state.openTrades.get("BTC"));
+  });
+
+  it("multiple-assets", async function () {
+    throw new Error("Unimplemented!");
+  });
+
+  it("longer-scenario", async function () {
+    // run trades across 3 assets, with fills, closes, cancels, on monitored, bogus and myPubkey
+    throw new Error("Unimplemented!");
   });
 });

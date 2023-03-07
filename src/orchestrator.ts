@@ -40,9 +40,13 @@ export class Orchestrator {
 
     await this.lock.runExclusive(async () => {
       const myPublicKey = this.config.wallet.address;
-      const openTrade = this.state.openTrades.get(event.symbol);
-      const amount = this.config.symbolMappings.find(({ symbol }) => symbol == event.symbol)?.cashAmount;
-      const leverage = this.config.symbolMappings.find(({ symbol }) => symbol == event.symbol)?.leverage;
+      const openTrade = this.state.openTrades.get(event.asset);
+      const amount = this.config.assetMappings.find(({ asset }) => asset == event.asset)?.cashAmount;
+      const leverage = this.config.assetMappings.find(({ asset }) => asset == event.asset)?.leverage;
+
+      // set the price
+      if (event.status == "filled") this.state.setPrice(event.asset, event.openPrice);
+      else if (event.status == "closed") this.state.setPrice(event.asset, event.closePrice);
 
       if (ownerPubkey == myPublicKey && openTrade && openTrade.clientTradeId == event.clientTradeId) {
         const o = { ...openTrade };
@@ -51,24 +55,24 @@ export class Orchestrator {
           // record new trade
           o.status = "placed";
           this.state.setTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade placed: ${JSON.stringify({ ...o })}`);
+          effectRunner = async () => await this.notifier.publish(`My trade placed: ${JSON.stringify(o)}`);
         } else if ([undefined, "placed"].includes(openTrade.status) && event.status == "filled") {
           // fill
           o.openPrice = event.openPrice;
           o.status = "filled";
           this.state.setTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade filled: ${JSON.stringify({ ...o })}`);
+          effectRunner = async () => await this.notifier.publish(`My trade filled: ${JSON.stringify(o)}`);
         } else if ([undefined, "placed"].includes(openTrade.status) && event.status == "cancelled") {
           // cancel
           o.status = "cancelled";
           this.state.setTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade cancelled: ${JSON.stringify({ ...o })}`);
+          effectRunner = async () => await this.notifier.publish(`My trade cancelled: ${JSON.stringify(o)}`);
         } else if (openTrade.status == "filled" && event.status == "closed") {
           // close
           o.closePrice = event.closePrice;
           o.status = "closed";
           this.state.setTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade closed: ${JSON.stringify({ ...o })}`);
+          effectRunner = async () => await this.notifier.publish(`My trade closed: ${JSON.stringify(o)}`);
         } else {
           log.warn(`Unexpected event ${JSON.stringify(event)} for current trade ${openTrade}`);
         }
@@ -76,7 +80,7 @@ export class Orchestrator {
         if (!openTrade && event.status == "filled") {
           // issue a new trade
           const tradeCopy = {
-            symbol: event.symbol,
+            asset: event.asset,
             dir: event.dir,
             amount,
             leverage,
@@ -86,15 +90,17 @@ export class Orchestrator {
           };
           this.state.setTrade(tradeCopy);
           effectRunner = async () => await this.trader.createTrade({ ...tradeCopy });
-        } else if (openTrade && event.status == "cancelled") {
+        } else if (openTrade && [undefined, "placed"].includes(openTrade.status) && event.status == "cancelled") {
           // issue trade cancel
           effectRunner = async () => await this.trader.cancelTrade(openTrade.clientTradeId);
-        } else if (openTrade && event.status == "closed") {
+        } else if (openTrade?.status == "filled" && event.status == "closed") {
           // issue trade close
           effectRunner = async () => await this.trader.closeTrade(openTrade.clientTradeId);
+        } else {
+          log.info(`Ignoring event from monitored trader: ${JSON.stringify(event)}, openTrade: ${JSON.stringify(openTrade)}`);
         }
       } else {
-        log.info(`Ignoring event from unknown trader ${ownerPubkey}: ${JSON.stringify(event)}`);
+        log.info(`Ignoring event from unknown trader ${ownerPubkey}: ${JSON.stringify(event)}, openTrade: ${JSON.stringify(openTrade)}`);
       }
     });
 

@@ -16,19 +16,19 @@ async function main() {
 • network:                   ${config.network}
 • endpoint:                  ${config.endpoint}
 • webServerPort:             ${config.webServerPort} 
-• symbolMappings:            ${JSON.stringify(config.symbolMappings)}
+• assetMappings:            ${JSON.stringify(config.assetMappings)}
 • mockParams:                ${config.mockParams ? JSON.stringify(config.mockParams) : "--"}
 `);
-  const symbols = config.symbolMappings.map(({ symbol }) => symbol);
-  const state = new State(symbols);
-  const realTrader = new Trader(config.symbolMappings);
+  const assets = config.assetMappings.map(({ asset }) => asset);
+  const state = new State(assets);
+  const realTrader = new Trader(config.assetMappings);
   let mockExchange: MockExchange;
   if (config.mockParams)
     mockExchange = new MockExchange(
       config.wallet.address,
       config.monitoredTrader,
       config.mockParams,
-      config.symbolMappings.map((x) => x.symbol)
+      config.assetMappings.map((x) => x.asset)
     );
   const trader = config.mockParams ? new MockTrader(realTrader, mockExchange) : realTrader;
   const notifier = new Notifier(config.notifications);

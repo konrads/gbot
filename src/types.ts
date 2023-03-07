@@ -4,7 +4,7 @@ export interface Price {
 }
 
 export interface Trade {
-  symbol: Symbol;
+  asset: Asset;
   dir: Dir;
   openPrice: number;
   amount: number;
@@ -24,6 +24,6 @@ export type Status = "placed" | "cancelled" | "filled" | "closed";
 
 export type Address = string;
 
-export type Symbol = string;
+export type Asset = string;
 
 export type TradeId = number;

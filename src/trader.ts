@@ -1,5 +1,5 @@
 import { Trade, Address, TradeId } from "./types";
-import { SymbolMapping } from "./configuration";
+import { assetMapping } from "./configuration";
 
 export interface ITrader {
   createTrade(trade: Trade): Promise<void>;
@@ -10,11 +10,11 @@ export interface ITrader {
 }
 
 export class Trader {
-  private symbols: SymbolMapping[];
+  private assets: assetMapping[];
   private isShuttingDown: boolean = false;
 
-  constructor(symbols: SymbolMapping[]) {
-    this.symbols = symbols;
+  constructor(assets: assetMapping[]) {
+    this.assets = assets;
   }
 
   async createTrade(trade: Trade): Promise<void> {

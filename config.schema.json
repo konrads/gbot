@@ -7,13 +7,13 @@
     "mockParams": {"$ref": "#/definitions/MockParams"},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
-    "symbolMappings": {
+    "assetMappings": {
       "type": "array",
-      "items": [{"$ref": "#/definitions/SymbolMapping"}]
+      "items": [{"$ref": "#/definitions/assetMapping"}]
     },
     "monitoredTrader": {"type": "string"}
   },
-  "required": ["network", "endpoint", "symbolMappings", "monitoredTrader"],
+  "required": ["network", "endpoint", "assetMappings", "monitoredTrader"],
   "definitions": {
     "NotificationDetails": {
       "type": "object",
@@ -24,14 +24,14 @@
       "additionalProperties": false,
       "required": ["telegramToken", "telegramChatId"]
     },
-    "SymbolMapping": {
+    "assetMapping": {
       "type": "object",
       "properties": {
-        "symbol": {"type": "string"},
+        "asset": {"type": "string"},
         "cashAmount": {"type": "number", "minimum": 0},
         "leverage": {"type": "number", "minimum": 0}
       },
-      "required": ["symbol", "cashAmount", "leverage"]
+      "required": ["asset", "cashAmount", "leverage"]
     },
     "MockParams": {
       "type": "object",

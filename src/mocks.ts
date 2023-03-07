@@ -5,7 +5,7 @@
 import { MockParams } from "./configuration";
 import { log } from "./log";
 import { Trader } from "./trader";
-import { Address, Dir, Trade, Status, TradeId, Symbol } from "./types";
+import { Address, Dir, Trade, Status, TradeId, Asset } from "./types";
 import { randomVal } from "./utils";
 
 export class MockTrader {
@@ -42,16 +42,16 @@ export class MockExchange {
   private monitoredTrader: string;
   private bogusTrader: string;
   private myPubkey: string;
-  private symbols: Symbol[];
+  private assets: Asset[];
   private handleEvent: (ownerPubkey: string, data) => Promise<void>;
   private tickCnt: number = 0;
   private expTrade: Trade;
 
-  constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, symbols: Symbol[]) {
+  constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, assets: Asset[]) {
     this.myPubkey = myPubkey;
     this.monitoredTrader = monitoredTrader;
     this.bogusTrader = mockParams.bogusTrader;
-    this.symbols = symbols;
+    this.assets = assets;
   }
 
   initialize(handler: (ownerPubkey: string, data) => Promise<void>) {
@@ -77,7 +77,7 @@ export class MockExchange {
     log.info(`mock tick ${this.tickCnt}, expTrade: ${JSON.stringify(this.expTrade)}`);
     let rand = Math.random();
     let template: Trade = {
-      symbol: randomVal(this.symbols),
+      asset: randomVal(this.assets),
       dir: randomVal(["buy", "sell"]) as Dir,
       owner: randomVal([this.myPubkey, this.monitoredTrader, this.bogusTrader]),
       openPrice: Math.random() * 10_000,

@@ -10,11 +10,11 @@
     "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
     "telegramChatId": "-873100380"
   },
-  "symbolMappings": [
-    { "symbol": "BTC", "tradeCashAmount": 100, "tradeLeverage": 15 },
-    { "symbol": "ETH", "tradeCashAmount": 100, "tradeLeverage": 15 },
-    { "symbol": "SOL", "tradeCashAmount": 100, "tradeLeverage": 15 },
-    { "symbol": "APT", "tradeCashAmount": 100, "tradeLeverage": 15 }
+  "assetMappings": [
+    { "asset": "BTC", "tradeCashAmount": 100, "tradeLeverage": 15 },
+    { "asset": "ETH", "tradeCashAmount": 100, "tradeLeverage": 15 },
+    { "asset": "SOL", "tradeCashAmount": 100, "tradeLeverage": 15 },
+    { "asset": "APT", "tradeCashAmount": 100, "tradeLeverage": 15 }
   ],
   "monitoredTrader": "monitored-pubkey",
   "mockParams": {

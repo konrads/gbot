@@ -6,11 +6,11 @@
     "telegramToken": "xxx",
     "telegramChatId": "yyy"
   },
-  "symbolMappings": [
-    { "symbol": "BTC", "cashAmount": 100, "leverage": 15 },
-    { "symbol": "ETH", "cashAmount": 100, "leverage": 15 },
-    { "symbol": "SOL", "cashAmount": 100, "leverage": 15 },
-    { "symbol": "APT", "cashAmount": 100, "leverage": 15 }
+  "assetMappings": [
+    { "asset": "BTC", "cashAmount": 100, "leverage": 15 },
+    { "asset": "ETH", "cashAmount": 100, "leverage": 15 },
+    { "asset": "SOL", "cashAmount": 100, "leverage": 15 },
+    { "asset": "APT", "cashAmount": 100, "leverage": 15 }
   ],
   "monitoredTrader": "monitored-pubkey"
 }

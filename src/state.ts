@@ -1,18 +1,18 @@
-import { Trade, Price, TradeId, Symbol } from "./types";
+import { Trade, Price, TradeId, Asset } from "./types";
 
 export class State {
   private readonly prices: Map<string, Price> = new Map();
-  private readonly symbolz: string[];
-  private readonly myCurrentTradez: Map<Symbol, TradeId> = new Map();
+  private readonly assetz: string[];
+  private readonly myCurrentTradez: Map<Asset, TradeId> = new Map();
   private readonly tradesByClientTradeId: Map<TradeId, Trade> = new Map();
   private readonly myTsTrades: [number, TradeId][] = [];
 
-  constructor(symbols: string[]) {
-    this.symbolz = symbols;
+  constructor(assets: string[]) {
+    this.assetz = assets;
   }
 
-  get symbols(): string[] {
-    return this.symbolz;
+  get assets(): string[] {
+    return this.assetz;
   }
 
   get pnl(): number {
@@ -25,12 +25,12 @@ export class State {
       .reduce((x, y) => x + y, 0);
   }
 
-  setPrice(symbol: string, price: number) {
-    this.prices.set(symbol, { price, ts: new Date() });
+  setPrice(asset: string, price: number) {
+    this.prices.set(asset, { price, ts: new Date() });
   }
 
-  getPrice(symbol: string): Price {
-    return this.prices.get(symbol);
+  getPrice(asset: string): Price {
+    return this.prices.get(asset);
   }
 
   setTrade(trade: Trade) {
@@ -38,21 +38,21 @@ export class State {
     if (trade.status == undefined) {
       this.tradesByClientTradeId.set(trade.clientTradeId, trade);
       this.myTsTrades.push([Date.now(), trade.clientTradeId]);
-      this.myCurrentTradez.set(trade.symbol, trade.clientTradeId);
-    } else if (registeredTrade && ["placed", "cancelled"].includes(trade.status)) {
+      this.myCurrentTradez.set(trade.asset, trade.clientTradeId);
+    } else if (registeredTrade && [undefined, "placed"].includes(registeredTrade.status) && trade.status == "cancelled") {
       registeredTrade.status = trade.status;
-    } else if (registeredTrade && trade.status == "filled") {
+    } else if (registeredTrade && [undefined, "placed"].includes(registeredTrade.status) && trade.status == "filled") {
       registeredTrade.openPrice = trade.openPrice;
       registeredTrade.status = "filled";
-    } else if (registeredTrade && trade.status == "closed") {
+    } else if (registeredTrade?.status == "filled" && trade.status == "closed") {
       registeredTrade.closePrice = trade.closePrice;
       registeredTrade.status = "closed";
-      this.myCurrentTradez.set(trade.symbol, undefined);
+      this.myCurrentTradez.set(trade.asset, undefined);
     }
   }
 
-  get openTrades(): Map<Symbol, Trade> {
-    return new Map([...this.myCurrentTradez.entries()].map(([symbol, clientTradeId]) => [symbol, this.tradesByClientTradeId.get(clientTradeId)]));
+  get openTrades(): Map<Asset, Trade> {
+    return new Map([...this.myCurrentTradez.entries()].map(([asset, clientTradeId]) => [asset, this.tradesByClientTradeId.get(clientTradeId)]));
   }
 
   get myTrades(): [number, Trade][] {

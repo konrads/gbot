@@ -24,12 +24,12 @@ export function startExpress(config: Config, state: State) {
       network: config.network,
       pnl: state.pnl,
 
-      symbols: state.symbols.map((symbol) => {
-        const price = state.getPrice(symbol);
-        const positionBase = state.openTrades.get(symbol).amount;
+      assets: state.assets.map((asset) => {
+        const price = state.getPrice(asset);
+        const positionBase = state.openTrades.get(asset).amount;
         const positionCash = positionBase && price ? positionBase * price.price : undefined;
         return {
-          symbol,
+          asset,
           price: price?.price,
           priceTs: price?.ts.toLocaleString(),
           positionBase,
@@ -39,7 +39,7 @@ export function startExpress(config: Config, state: State) {
       orders: state.myTrades.map(([ts, order]) => {
         return {
           ts: new Date(ts).toLocaleString(),
-          order: `${order.symbol}: ${order.dir} ${order.amount} @ ${order.openPrice}: ${order.status}, ${order.clientTradeId}`,
+          order: `${order.asset}: ${order.dir} ${order.amount} @ ${order.openPrice}: ${order.status}, ${order.clientTradeId}`,
         };
       }),
     };
