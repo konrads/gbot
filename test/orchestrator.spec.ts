@@ -3,7 +3,7 @@ import { Config } from "../src/configuration";
 import { State } from "../src/state";
 import { Orchestrator } from "../src/orchestrator";
 import { Notifier } from "../src/notifications";
-import { Trade, TradeId, Address } from "../src/types";
+import { Trade, TradeId, Address, Dir } from "../src/types";
 import { Wallet } from "ethers";
 
 const wallet = new Wallet(Wallet.createRandom().privateKey);
@@ -174,11 +174,68 @@ describe("orchestrator", function () {
   });
 
   it("multiple-assets", async function () {
-    throw new Error("Unimplemented!");
+    const trade = {
+      dir: "buy" as Dir,
+      openPrice: 100,
+      amount: 1,
+      leverage: 1,
+      tradeId: 1,
+    };
+    const { events } = await setup(
+      { issuer: monitoredTrader, trade: { ...trade, asset: "BTC", owner: monitoredTrader, openPrice: 100, status: "filled" } },
+      { issuer: wallet.address, trade: { ...trade, asset: "BTC", owner: wallet.address, openPrice: 100, status: "filled", clientTradeId: 0 } },
+      { issuer: monitoredTrader, trade: { ...trade, asset: "BTC", owner: monitoredTrader, closePrice: 150, status: "closed" } },
+      { issuer: monitoredTrader, trade: { ...trade, asset: "ETH", owner: monitoredTrader, openPrice: 200, status: "filled" } },
+      { issuer: wallet.address, trade: { ...trade, asset: "ETH", owner: wallet.address, openPrice: 200, status: "filled", clientTradeId: 1 } },
+      { issuer: monitoredTrader, trade: { ...trade, asset: "ETH", owner: monitoredTrader, openPrice: 250, status: "closed" } },
+      { issuer: monitoredTrader, trade: { ...trade, asset: "SOL", owner: monitoredTrader, openPrice: 300, status: "filled" } },
+      { issuer: wallet.address, trade: { ...trade, asset: "SOL", owner: wallet.address, openPrice: 300, status: "filled", clientTradeId: 2 } },
+      { issuer: monitoredTrader, trade: { ...trade, asset: "SOL", owner: monitoredTrader, openPrice: 350, status: "closed" } }
+    );
+
+    const expTrade: Trade = {
+      amount: 100,
+      dir: "buy",
+      leverage: 10,
+      openPrice: 0,
+      owner: wallet.address,
+      asset: "BTC",
+    };
+    assert.deepEqual(
+      [
+        { event: "createTrade", trade: { ...expTrade, clientTradeId: 0, asset: "BTC", openPrice: 100, owner: wallet.address } },
+        { event: "closeTrade", clientTradeId: 0 },
+        { event: "createTrade", trade: { ...expTrade, clientTradeId: 1, asset: "ETH", openPrice: 200, owner: wallet.address } },
+        { event: "closeTrade", clientTradeId: 1 },
+        { event: "createTrade", trade: { ...expTrade, clientTradeId: 2, asset: "SOL", openPrice: 300, owner: wallet.address } },
+        { event: "closeTrade", clientTradeId: 2 },
+      ],
+      events
+    );
   });
 
   it("longer-scenario", async function () {
     // run trades across 3 assets, with fills, closes, cancels, on monitored, bogus and myPubkey
     throw new Error("Unimplemented!");
+  });
+
+  it("set-prices", async function () {
+    // all trades contribute to price setting
+    // either openPrice on fill, or closePrice on close
+    const trade = {
+      dir: "sell" as Dir,
+      openPrice: 100,
+      amount: 1,
+      leverage: 1,
+      tradeId: 1,
+    };
+    const { state } = await setup(
+      { issuer: wallet.address, trade: { ...trade, asset: "BTC", owner: wallet.address, status: "filled" } },
+      { issuer: monitoredTrader, trade: { ...trade, asset: "ETH", owner: monitoredTrader, closePrice: 200, status: "closed" } },
+      { issuer: bogusTrader, trade: { ...trade, asset: "SOL", owner: bogusTrader, openPrice: 300, status: "filled" } }
+    );
+    assert.strictEqual(100, state.getPrice("BTC").price);
+    assert.strictEqual(200, state.getPrice("ETH").price);
+    assert.strictEqual(300, state.getPrice("SOL").price);
   });
 });
