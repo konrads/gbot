@@ -30,7 +30,54 @@ export enum GtradeOrderType {
   Market = 0,
 }
 
-const GTRADE_PAIRS = ["btc", "eth", "link", "doge", "matic", "ada", "sushi", "aave", "algo", "bat", "comp", "dot", "eos", "ltc", "mana", "omg", "snx", "uni", "xlm", "xrp", "zec", "audusd", "eurchf", "eurgbp", "eurjpy", "eurusd", "gbpusd", "nzdusd", "usdcad", "usdchf", "usdjpy", "luna", "yfi", "sol", "xtz", "bch", "bnt", "crv", "dash", "etc", "icp", "mkr", "neo", "theta", "trx", "zrx"];
+const GTRADE_PAIRS = [
+  "btc",
+  "eth",
+  "link",
+  "doge",
+  "matic",
+  "ada",
+  "sushi",
+  "aave",
+  "algo",
+  "bat",
+  "comp",
+  "dot",
+  "eos",
+  "ltc",
+  "mana",
+  "omg",
+  "snx",
+  "uni",
+  "xlm",
+  "xrp",
+  "zec",
+  "audusd",
+  "eurchf",
+  "eurgbp",
+  "eurjpy",
+  "eurusd",
+  "gbpusd",
+  "nzdusd",
+  "usdcad",
+  "usdchf",
+  "usdjpy",
+  "luna",
+  "yfi",
+  "sol",
+  "xtz",
+  "bch",
+  "bnt",
+  "crv",
+  "dash",
+  "etc",
+  "icp",
+  "mkr",
+  "neo",
+  "theta",
+  "trx",
+  "zrx",
+];
 
 export class GTrade {
   private readonly referrer: string;
@@ -104,21 +151,22 @@ export class GTrade {
     return res;
   }
 
-  async issueTrade(pair: string, orderIndex: number, size: number, price: number, slippage: number, leverage: number, dir: "buy" | "sell", takeProfit?: number, stopLoss?: number): Promise<any> {
+  async issueTrade(pair: string, size: number, price: number, leverage: number, dir: "buy" | "sell", /* clientTradeId: number, */ takeProfit?: number, stopLoss?: number, orderIndex: number = 0, slippage: number = 0.01): Promise<any> {
+    // FIXME: inject clientTradeId!
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     let initialPosToken = 0;
     let positionSizeDai = BigInt(size * 10 ** 18);
     let openPrice = price * 10 ** 10;
     let buy = dir == "buy";
-    if (takeProfit) takeProfit = takeProfit * 10 ** 10;
-    if (stopLoss) stopLoss = stopLoss * 10 ** 10;
-    if (slippage) slippage = slippage * 10 ** 12;
+    takeProfit = (takeProfit ?? dir == "buy" ? price * 5 : 0) * 10 ** 10;
+    stopLoss = (stopLoss ?? dir == "buy" ? 0 : price * 5) * 10 ** 10;
+    slippage = slippage * 10 ** 12;
 
     let orderType = 0;
     let spreadReductionId = 0;
 
-    let tuple = {
+    let gTradeOrder = {
       trader: this.signer.address,
       pairIndex,
       index: orderIndex,
@@ -129,10 +177,10 @@ export class GTrade {
       leverage,
       tp: takeProfit,
       sl: stopLoss,
-      id: 123,
     };
 
-    let res = await (await this.getTradingContract()).openTrade(tuple, orderType, spreadReductionId, slippage, this.referrer);
+    const tradingContract = await this.getTradingContract();
+    const res = await tradingContract.openTrade(gTradeOrder, orderType, spreadReductionId, slippage, this.referrer);
     return res;
   }
 

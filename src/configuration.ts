@@ -7,7 +7,7 @@ export interface Notifications {
   telegramChatId: string;
 }
 
-export interface assetMapping {
+export interface AssetMapping {
   asset: string;
   cashAmount: number;
   leverage: number;
@@ -19,7 +19,7 @@ export interface Config {
   endpoint: string;
   webServerPort: number;
   notifications?: Notifications;
-  assetMappings: assetMapping[];
+  assetMappings: AssetMapping[];
   monitoredTrader: string;
   wallet: Wallet;
 }

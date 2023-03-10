@@ -90,9 +90,6 @@ export class Orchestrator {
           };
           this.state.setTrade(tradeCopy);
           effectRunner = async () => await this.trader.createTrade({ ...tradeCopy });
-        } else if (openTrade && [undefined, "placed"].includes(openTrade.status) && event.status == "cancelled") {
-          // issue trade cancel
-          effectRunner = async () => await this.trader.cancelTrade(openTrade.clientTradeId);
         } else if (openTrade?.status == "filled" && event.status == "closed") {
           // issue trade close
           effectRunner = async () => await this.trader.closeTrade(openTrade.clientTradeId);

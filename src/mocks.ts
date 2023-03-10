@@ -2,7 +2,7 @@
 // fills and cancels orders existing
 // updates positions as per fills
 
-import { MockParams } from "./configuration";
+import { AssetMapping, MockParams } from "./configuration";
 import { log } from "./log";
 import { Trader } from "./trader";
 import { Address, Dir, Trade, Status, TradeId, Asset } from "./types";
@@ -42,16 +42,16 @@ export class MockExchange {
   private monitoredTrader: string;
   private bogusTrader: string;
   private myPubkey: string;
-  private assets: Asset[];
+  private assetMappings: AssetMapping[];
   private handleEvent: (ownerPubkey: string, data) => Promise<void>;
   private tickCnt: number = 0;
   private expTrade: Trade;
 
-  constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, assets: Asset[]) {
+  constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, assetMappings: AssetMapping[]) {
     this.myPubkey = myPubkey;
     this.monitoredTrader = monitoredTrader;
     this.bogusTrader = mockParams.bogusTrader;
-    this.assets = assets;
+    this.assetMappings = assetMappings;
   }
 
   initialize(handler: (ownerPubkey: string, data) => Promise<void>) {
@@ -75,14 +75,17 @@ export class MockExchange {
 
   tick() {
     log.info(`mock tick ${this.tickCnt}, expTrade: ${JSON.stringify(this.expTrade)}`);
-    let rand = Math.random();
+    const rand = Math.random();
+    const asset = randomVal(this.assetMappings.map(({ asset }) => asset));
+    const assetMapping = this.assetMappings.find((x) => x.asset == asset);
+    const openPrice = Math.random() * 10_000;
     let template: Trade = {
-      asset: randomVal(this.assets),
+      asset,
       dir: randomVal(["buy", "sell"]) as Dir,
       owner: randomVal([this.myPubkey, this.monitoredTrader, this.bogusTrader]),
-      openPrice: Math.random() * 10_000,
-      amount: Math.round(Math.random() * 100),
-      leverage: Math.round(Math.random() * 10),
+      openPrice,
+      amount: assetMapping.cashAmount / openPrice,
+      leverage: assetMapping.leverage,
       tradeId: this.tickCnt,
       clientTradeId: this.tickCnt,
       status: randomVal(["placed", "cancelled", "filled", "closed"]) as Status,

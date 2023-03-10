@@ -147,8 +147,9 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     },
     handler: async ({ orderIndex, pair, size, price, slippage, leverage, dir, takeProfit, stopLoss }) => {
       const config = loadConfig();
+      console.log(`Issuing trade as ${config.wallet.address}`);
       const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
-      const res = await gtrade.issueTrade(pair, orderIndex, size, price, slippage, leverage, dir as "buy" | "sell", takeProfit, stopLoss);
+      const res = await gtrade.issueTrade(pair, size, price, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
       log.info(`issueTrade hash ${res.hash}`);
     },
   });

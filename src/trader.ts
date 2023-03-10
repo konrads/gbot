@@ -1,5 +1,5 @@
 import { Trade, Address, TradeId } from "./types";
-import { assetMapping } from "./configuration";
+import { AssetMapping } from "./configuration";
 
 export interface ITrader {
   createTrade(trade: Trade): Promise<void>;
@@ -10,10 +10,10 @@ export interface ITrader {
 }
 
 export class Trader {
-  private assets: assetMapping[];
+  private assets: AssetMapping[];
   private isShuttingDown: boolean = false;
 
-  constructor(assets: assetMapping[]) {
+  constructor(assets: AssetMapping[]) {
     this.assets = assets;
   }
 

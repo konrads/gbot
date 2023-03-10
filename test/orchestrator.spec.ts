@@ -214,11 +214,6 @@ describe("orchestrator", function () {
     );
   });
 
-  it("longer-scenario", async function () {
-    // run trades across 3 assets, with fills, closes, cancels, on monitored, bogus and myPubkey
-    throw new Error("Unimplemented!");
-  });
-
   it("set-prices", async function () {
     // all trades contribute to price setting
     // either openPrice on fill, or closePrice on close

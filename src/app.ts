@@ -23,13 +23,7 @@ async function main() {
   const state = new State(assets);
   const realTrader = new Trader(config.assetMappings);
   let mockExchange: MockExchange;
-  if (config.mockParams)
-    mockExchange = new MockExchange(
-      config.wallet.address,
-      config.monitoredTrader,
-      config.mockParams,
-      config.assetMappings.map((x) => x.asset)
-    );
+  if (config.mockParams) mockExchange = new MockExchange(config.wallet.address, config.monitoredTrader, config.mockParams, config.assetMappings);
   const trader = config.mockParams ? new MockTrader(realTrader, mockExchange) : realTrader;
   const notifier = new Notifier(config.notifications);
   const orchestrator = new Orchestrator(config, state, trader, notifier);
