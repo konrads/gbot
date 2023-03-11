@@ -151,7 +151,17 @@ export class GTrade {
     return res;
   }
 
-  async issueTrade(pair: string, size: number, price: number, leverage: number, dir: "buy" | "sell", /* clientTradeId: number, */ takeProfit?: number, stopLoss?: number, orderIndex: number = 0, slippage: number = 0.01): Promise<any> {
+  async issueTrade(
+    pair: string,
+    size: number,
+    price: number,
+    leverage: number,
+    dir: "buy" | "sell",
+    /* clientTradeId: number, */ takeProfit?: number,
+    stopLoss?: number,
+    tradeIndex: number = 0,
+    slippage: number = 0.01
+  ): Promise<any> {
     // FIXME: inject clientTradeId!
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
@@ -169,7 +179,7 @@ export class GTrade {
     let gTradeOrder = {
       trader: this.signer.address,
       pairIndex,
-      index: orderIndex,
+      index: tradeIndex,
       initialPosToken,
       positionSizeDai,
       openPrice,

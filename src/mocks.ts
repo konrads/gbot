@@ -4,7 +4,6 @@
 
 import { AssetMapping, MockParams } from "./configuration";
 import { log } from "./log";
-import { State } from "./state";
 import { Trader } from "./trader";
 import { Address, Dir, Trade, Status, TradeId, Asset } from "./types";
 import { randomVal, randomPlusPerc } from "./utils";
@@ -29,10 +28,6 @@ export class MockTrader {
     return await this.mockExchange.createTrade(trade);
   }
 
-  async cancelTrade(clientTradeId: TradeId): Promise<void> {
-    return await this.mockExchange.cancelTrade(clientTradeId);
-  }
-
   async closeTrade(clientTradeId: TradeId): Promise<void> {
     return await this.mockExchange.closeTrade(clientTradeId);
   }
@@ -54,7 +49,7 @@ export class MockExchange {
   private handleEvent: (ownerPubkey: string, data) => Promise<void>;
   private tickCnt: number = 0;
   private clientTrades: Map<TradeId, Trade> = new Map();
-  private clientReqs: { clientTradeId: TradeId; action: "new" | "close" | "cancel" }[] = [];
+  private clientReqs: { clientTradeId: TradeId; action: "new" | "close" }[] = [];
 
   constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, assetMappings: AssetMapping[]) {
     this.myPubkey = myPubkey;
@@ -71,10 +66,6 @@ export class MockExchange {
   createTrade(trade: Trade) {
     this.clientTrades.set(trade.clientTradeId, { ...trade });
     this.clientReqs.push({ clientTradeId: trade.clientTradeId, action: "new" });
-  }
-
-  cancelTrade(clientTradeId: TradeId) {
-    this.clientReqs.push({ clientTradeId: clientTradeId, action: "cancel" });
   }
 
   closeTrade(clientTradeId: TradeId) {
