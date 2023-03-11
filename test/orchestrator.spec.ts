@@ -124,7 +124,7 @@ describe("orchestrator", function () {
     assert.deepEqual([{ event: "createTrade", trade: expTrade }], events);
     assert.strictEqual(1, state.myTrades.length);
     assert.deepEqual({ ...expTrade, status: "cancelled" }, state.myTrades[0][1]);
-    assert.deepEqual({ ...expTrade, status: "cancelled" }, state.openTrades.get("BTC"));
+    assert.deepEqual(undefined, state.openTrades.get("BTC"));
   });
 
   it("monitored-fill_monitored-close", async function () {

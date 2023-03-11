@@ -38,11 +38,9 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function toFixed(x: number, fractionDigits: number): string {
+export function toFixed(x: number, fractionDigits: number): number {
   if (x != undefined) {
-    const fixed = x.toFixed(fractionDigits);
-    const asStr = fractionDigits < 1 ? fixed : fixed.replace(/\.*0+$/, "");
-    return asStr == "-0" ? "0" : asStr; // happens when rounded down to 0, but is small negative fraction
+    return +x.toFixed(fractionDigits);
   }
 }
 
@@ -77,6 +75,10 @@ export function bumpRestartCount(): number {
 export function randomVal<T>(arr: T[]): T {
   const ind = Math.floor(Math.random() * arr.length);
   return arr[ind];
+}
+
+export function randomPlusPerc(base: number, perc: number): number {
+  return base + base * perc * 2 * (Math.random() - 0.5);
 }
 
 export async function getGasPrice(): Promise<EstimatedGasPrice> {

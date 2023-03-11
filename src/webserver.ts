@@ -27,26 +27,23 @@ export function startExpress(config: Config, state: State) {
 
       assets: state.assets.map((asset) => {
         const price = state.getPrice(asset);
-        const positionBase = state.openTrades.get(asset).amount;
-        const positionCash = positionBase && price ? positionBase * price.price : undefined;
         return {
           asset,
-          price: price?.price,
+          price: toFixed(price?.price, 2),
           priceTs: price?.ts.toLocaleString(),
-          positionBase,
-          positionCash,
+          amount: state.openTrades.get(asset)?.amount,
         };
       }),
       myTrades: state.myTrades.map(([ts, trade]) => {
         return {
           ts: new Date(ts).toLocaleString(),
-          order: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${trade.openPrice}: ${trade.status}, ${trade.clientTradeId}`,
+          trade: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${toFixed(trade.openPrice, 2)}->${toFixed(trade.closePrice, 2)}: status: ${trade.status}, ids: ${trade.tradeId}/${trade.clientTradeId}`,
         };
       }),
       monitoredTrades: state.monitoredTrades.map(([ts, trade]) => {
         return {
           ts: new Date(ts).toLocaleString(),
-          order: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${trade.openPrice}: ${trade.status}, ${trade.clientTradeId}`,
+          trade: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${toFixed(trade.openPrice, 2)}->${toFixed(trade.closePrice, 2)}: status: ${trade.status}, ids: ${trade.tradeId}/${trade.clientTradeId}`,
         };
       }),
     };

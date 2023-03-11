@@ -13,10 +13,10 @@
 <body>
     <h2>Assets</h2>
     <table>
-        <tr><th></th>{{#each asset}}<th><strong>{{asset}}</strong></th>{{/each}}</tr>
+        <tr><th></th>{{#each assets}}<th><strong>{{asset}}</strong></th>{{/each}}</tr>
         <tr><td><strong>Mark</strong></td>{{#each assets}}<td><div class="currency">{{cash price}}</div></td>{{/each}}</tr>
         <tr><td><strong>Updated</strong></td>{{#each assets}}<td>{{priceTs}}</td>{{/each}}</tr>
-        <tr><td><strong>Cash</strong></td>{{#each assets}}<td><div class="cash">{{cash positionCash}}</div></td>{{/each}}</tr>
+        <tr><td><strong>Amount</strong></td>{{#each assets}}<td><div class="cash">{{cash amount}}</div></td>{{/each}}</tr>
     </table>
 
     <h2>My trades</h2>

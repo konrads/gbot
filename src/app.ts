@@ -13,11 +13,11 @@ import { MockExchange, MockTrader } from "./mocks";
 async function main() {
   const config = loadConfig();
   log.info(`Starting Gbot with config:
-• network:                   ${config.network}
-• endpoint:                  ${config.endpoint}
-• webServerPort:             ${config.webServerPort} 
-• assetMappings:            ${JSON.stringify(config.assetMappings)}
-• mockParams:                ${config.mockParams ? JSON.stringify(config.mockParams) : "--"}
+• network:        ${config.network}
+• endpoint:       ${config.endpoint}
+• webServerPort:  ${config.webServerPort} 
+• assetMappings:  ${JSON.stringify(config.assetMappings)}
+• mockParams:     ${config.mockParams ? JSON.stringify(config.mockParams) : "--"}
 `);
   const assets = config.assetMappings.map(({ asset }) => asset);
   const state = new State(assets);

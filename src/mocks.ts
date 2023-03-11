@@ -4,9 +4,17 @@
 
 import { AssetMapping, MockParams } from "./configuration";
 import { log } from "./log";
+import { State } from "./state";
 import { Trader } from "./trader";
 import { Address, Dir, Trade, Status, TradeId, Asset } from "./types";
-import { randomVal } from "./utils";
+import { randomVal, randomPlusPerc } from "./utils";
+
+const ASSET_PRICE_DEFAULT: Map<Asset, number> = new Map([
+  ["BTC", 20_000],
+  ["ETH", 1500],
+  ["SOL", 15],
+  ["APT", 10],
+]);
 
 export class MockTrader {
   private readonly trader: Trader;
@@ -45,7 +53,8 @@ export class MockExchange {
   private assetMappings: AssetMapping[];
   private handleEvent: (ownerPubkey: string, data) => Promise<void>;
   private tickCnt: number = 0;
-  private expTrade: Trade;
+  private clientTrades: Map<TradeId, Trade> = new Map();
+  private clientReqs: { clientTradeId: TradeId; action: "new" | "close" | "cancel" }[] = [];
 
   constructor(myPubkey: string, monitoredTrader: string, mockParams: MockParams, assetMappings: AssetMapping[]) {
     this.myPubkey = myPubkey;
@@ -56,72 +65,96 @@ export class MockExchange {
 
   initialize(handler: (ownerPubkey: string, data) => Promise<void>) {
     this.handleEvent = handler;
-    setInterval(() => this.tick(), 1000); // refresh every sec
+    setInterval(async () => await this.tick(), 1000); // refresh every sec
   }
 
   createTrade(trade: Trade) {
-    this.expTrade = { ...trade, clientTradeId: this.tickCnt, status: "placed", owner: this.myPubkey };
+    this.clientTrades.set(trade.clientTradeId, { ...trade });
+    this.clientReqs.push({ clientTradeId: trade.clientTradeId, action: "new" });
   }
 
-  cancelTrade(tradeId: TradeId) {
-    if (tradeId == this.expTrade?.clientTradeId) this.expTrade = { ...this.expTrade, status: "cancelled" };
-    else log.warn(`Unexpected tradeId ${tradeId} to cancel, have expTrade ${JSON.stringify(this.expTrade)}`);
+  cancelTrade(clientTradeId: TradeId) {
+    this.clientReqs.push({ clientTradeId: clientTradeId, action: "cancel" });
   }
 
-  closeTrade(tradeId: TradeId) {
-    if (tradeId == this.expTrade?.clientTradeId) this.expTrade = { ...this.expTrade, status: "closed", closePrice: Math.round(Math.random() * 10_000) };
-    else log.warn(`Unexpected tradeId ${tradeId} to close, have expTrade ${JSON.stringify(this.expTrade)}`);
+  closeTrade(clientTradeId: TradeId) {
+    this.clientReqs.push({ clientTradeId: clientTradeId, action: "close" });
   }
 
   async tick() {
-    log.info(`mock tick ${this.tickCnt}, expTrade: ${JSON.stringify(this.expTrade)}`);
-    const rand = Math.random();
-    const asset = randomVal(this.assetMappings.map(({ asset }) => asset));
-    const assetMapping = this.assetMappings.find((x) => x.asset == asset);
-    const openPrice = Math.random() * 10_000;
-    let template: Trade = {
-      asset,
-      dir: randomVal(["buy", "sell"]) as Dir,
-      owner: randomVal([this.myPubkey, this.monitoredTrader, this.bogusTrader]),
-      openPrice,
-      amount: assetMapping.cashAmount,
-      leverage: assetMapping.leverage,
-      tradeId: this.tickCnt,
-      clientTradeId: this.tickCnt,
-      status: randomVal(["placed", "cancelled", "filled", "closed"]) as Status,
-    };
-
+    const rand = this.random();
     if (rand < 0.4) {
-      // issuing my trade as requested by client
-      if (this.expTrade) {
-        if (this.expTrade?.status == "placed") {
-          if (Math.random() < 0.7) {
-            log.info(`Progressing my trade to filled!`);
-            await this.handleEvent(this.myPubkey, { ...this.expTrade, status: "filled" });
+      // deal with client queued requests
+      const clientReq = this.clientReqs.pop();
+      if (clientReq) {
+        const clientTrade = this.clientTrades.get(clientReq.clientTradeId);
+        if (clientTrade && clientTrade.status == undefined && clientReq.action == "new") {
+          log.info(`Progressing queued trade ${JSON.stringify(clientTrade)} to placed!`);
+          clientTrade.status = "placed";
+          await this.handleEvent(this.myPubkey, { ...clientTrade });
+          if (Math.random() < 0.8) {
+            log.info(`Progressing queued trade ${JSON.stringify(clientTrade)} to filled!`);
+            clientTrade.status = "filled";
+            await this.handleEvent(this.myPubkey, { ...clientTrade });
           } else {
-            log.info(`Progressing my trade to cancelled!`);
-            await this.handleEvent(this.myPubkey, { ...this.expTrade, status: "cancelled" });
-            this.expTrade = undefined;
+            log.info(`Progressing queued trade ${JSON.stringify(clientTrade)} to cancelled!`);
+            clientTrade.status = "cancelled";
+            await this.handleEvent(this.myPubkey, { ...clientTrade });
           }
-        } else if (this.expTrade?.status == "filled") {
-          log.info(`Progressing my trade to closed!`);
-          await this.handleEvent(this.myPubkey, { ...this.expTrade, status: "closed" });
-          this.expTrade = undefined;
+        } else if (clientTrade?.status == "filled" && clientReq.action == "close") {
+          log.info(`Progressing queued trade ${JSON.stringify(clientTrade)} to closed!`);
+          clientTrade.status = "closed";
+          clientTrade.closePrice = randomPlusPerc(clientTrade.openPrice, 0.1);
+          await this.handleEvent(this.myPubkey, { ...clientTrade });
         } else {
-          throw new Error(`Unexpected expTrade status: ${JSON.stringify(this.expTrade)}`);
+          throw new Error(`Unexpected queued trade: ${JSON.stringify(clientTrade)}, clientReq: ${JSON.stringify(clientReq)}`);
         }
       } else {
-        log.info(`Have no expTrade, skipping...`);
+        log.info(`No client reqs, skipping!`);
       }
-    } else if (rand > 0.4 && rand < 0.6) {
-      // issuing my trade with unknown ids
-      this.handleEvent(this.myPubkey, { ...template, owner: this.myPubkey, clientTradeId: 1_234_456 });
-    } else if (rand > 0.6 && rand < 0.8) {
-      // issuing random monitoredTrader event
-      this.handleEvent(this.monitoredTrader, { ...template, owner: this.monitoredTrader });
     } else {
-      this.handleEvent(this.bogusTrader, { ...template, owner: this.bogusTrader });
+      const asset = randomVal(this.assetMappings.map(({ asset }) => asset));
+      const assetMapping = this.assetMappings.find((x) => x.asset == asset);
+      const status = randomVal(["filled", "closed"]) as Status;
+      const openPrice = randomPlusPerc(ASSET_PRICE_DEFAULT.get(asset), 0.1);
+      const closePrice = status == "closed" ? randomPlusPerc(openPrice, 0.1) : undefined;
+      let template: Trade = {
+        asset,
+        dir: randomVal(["buy", "sell"]) as Dir,
+        owner: undefined,
+        openPrice,
+        closePrice,
+        amount: assetMapping.cashAmount,
+        leverage: assetMapping.leverage,
+        tradeId: this.tickCnt,
+        status,
+      };
+
+      if (rand < 0.6) {
+        // issuing my trade with unknown ids
+        const trade = { ...template, owner: this.myPubkey, clientTradeId: 1_234_567 };
+        log.info(`mock tick ${this.tickCnt}, my trade: ${JSON.stringify(trade)}`);
+        await this.handleEvent(this.myPubkey, trade);
+      } else if (rand < 0.8) {
+        // issuing random monitoredTrader event
+        const trade = { ...template, owner: this.monitoredTrader };
+        log.info(`mock tick ${this.tickCnt}, monitored trade: ${JSON.stringify(trade)}`);
+        await this.handleEvent(this.monitoredTrader, trade);
+      } else {
+        const trade = { ...template, owner: this.bogusTrader };
+        log.info(`mock tick ${this.tickCnt}, bogus trade: ${JSON.stringify(trade)}`);
+        await this.handleEvent(this.bogusTrader, trade);
+      }
     }
     this.tickCnt += 1;
+  }
+
+  randInd = 0;
+  random(): number {
+    // return Math.random();
+    const results = [0.2, 0.2, 0.2, 0.2, 0.5, 0.7];
+    const res = results[this.randInd];
+    this.randInd = (this.randInd + 1) % results.length;
+    return res;
   }
 }

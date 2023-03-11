@@ -23,7 +23,7 @@ export class State {
       .filter(([_, trade]) => trade.status == "closed")
       .map(([_, trade]) => {
         const dirMult = trade.dir == "buy" ? 1 : -1;
-        return (trade.closePrice - trade.openPrice) * dirMult * trade.amount * trade.leverage;
+        return ((trade.closePrice - trade.openPrice) / trade.openPrice) * dirMult * trade.amount * trade.leverage;
       })
       .reduce((x, y) => x + y, 0);
   }
@@ -33,7 +33,7 @@ export class State {
       .filter(([_, trade]) => trade.status == "closed")
       .map(([_, trade]) => {
         const dirMult = trade.dir == "buy" ? 1 : -1;
-        return (trade.closePrice - trade.openPrice) * dirMult * trade.amount * trade.leverage;
+        return ((trade.closePrice - trade.openPrice) / trade.openPrice) * dirMult * trade.amount * trade.leverage;
       })
       .reduce((x, y) => x + y, 0);
   }
@@ -54,13 +54,14 @@ export class State {
       this.myCurrentTradez.set(trade.asset, trade.clientTradeId);
     } else if (registeredTrade && [undefined, "placed"].includes(registeredTrade.status) && trade.status == "cancelled") {
       registeredTrade.status = trade.status;
+      this.myCurrentTradez.delete(trade.asset);
     } else if (registeredTrade && [undefined, "placed"].includes(registeredTrade.status) && trade.status == "filled") {
       registeredTrade.openPrice = trade.openPrice;
-      registeredTrade.status = "filled";
+      registeredTrade.status = trade.status;
     } else if (registeredTrade?.status == "filled" && trade.status == "closed") {
       registeredTrade.closePrice = trade.closePrice;
       registeredTrade.status = "closed";
-      this.myCurrentTradez.set(trade.asset, undefined);
+      this.myCurrentTradez.delete(trade.asset);
     }
   }
 
