@@ -159,7 +159,7 @@ export class GTrade {
     dir: "buy" | "sell",
     /* clientTradeId: number, */ takeProfit?: number,
     stopLoss?: number,
-    tradeIndex: number = 0,
+    orderIndex: number = 0,
     slippage: number = 0.01
   ): Promise<any> {
     // FIXME: inject clientTradeId!
@@ -176,10 +176,10 @@ export class GTrade {
     let orderType = 0;
     let spreadReductionId = 0;
 
-    let gTradeOrder = {
+    let order = {
       trader: this.signer.address,
       pairIndex,
-      index: tradeIndex,
+      index: orderIndex,
       initialPosToken,
       positionSizeDai,
       openPrice,
@@ -190,7 +190,7 @@ export class GTrade {
     };
 
     const tradingContract = await this.getTradingContract();
-    const res = await tradingContract.openTrade(gTradeOrder, orderType, spreadReductionId, slippage, this.referrer);
+    const res = await tradingContract.openTrade(order, orderType, spreadReductionId, slippage, this.referrer);
     return res;
   }
 
