@@ -73,7 +73,7 @@ export class MockExchange {
     else log.warn(`Unexpected tradeId ${tradeId} to close, have expTrade ${JSON.stringify(this.expTrade)}`);
   }
 
-  tick() {
+  async tick() {
     log.info(`mock tick ${this.tickCnt}, expTrade: ${JSON.stringify(this.expTrade)}`);
     const rand = Math.random();
     const asset = randomVal(this.assetMappings.map(({ asset }) => asset));
@@ -84,7 +84,7 @@ export class MockExchange {
       dir: randomVal(["buy", "sell"]) as Dir,
       owner: randomVal([this.myPubkey, this.monitoredTrader, this.bogusTrader]),
       openPrice,
-      amount: assetMapping.cashAmount / openPrice,
+      amount: assetMapping.cashAmount,
       leverage: assetMapping.leverage,
       tradeId: this.tickCnt,
       clientTradeId: this.tickCnt,
@@ -96,19 +96,16 @@ export class MockExchange {
       if (this.expTrade) {
         if (this.expTrade?.status == "placed") {
           if (Math.random() < 0.7) {
-            this.expTrade.status = "filled";
             log.info(`Progressing my trade to filled!`);
-            this.handleEvent(this.myPubkey, this.expTrade);
+            await this.handleEvent(this.myPubkey, { ...this.expTrade, status: "filled" });
           } else {
-            this.expTrade.status = "cancelled";
             log.info(`Progressing my trade to cancelled!`);
-            this.handleEvent(this.myPubkey, this.expTrade);
+            await this.handleEvent(this.myPubkey, { ...this.expTrade, status: "cancelled" });
             this.expTrade = undefined;
           }
         } else if (this.expTrade?.status == "filled") {
-          this.expTrade.status = "closed";
           log.info(`Progressing my trade to closed!`);
-          this.handleEvent(this.myPubkey, this.expTrade);
+          await this.handleEvent(this.myPubkey, { ...this.expTrade, status: "closed" });
           this.expTrade = undefined;
         } else {
           throw new Error(`Unexpected expTrade status: ${JSON.stringify(this.expTrade)}`);
@@ -118,17 +115,12 @@ export class MockExchange {
       }
     } else if (rand > 0.4 && rand < 0.6) {
       // issuing my trade with unknown ids
-      const myTrade = { ...template, owner: this.myPubkey, clientTradeId: 1_234_456 };
-      this.handleEvent(this.myPubkey, myTrade);
+      this.handleEvent(this.myPubkey, { ...template, owner: this.myPubkey, clientTradeId: 1_234_456 });
     } else if (rand > 0.6 && rand < 0.8) {
       // issuing random monitoredTrader event
-      const myTrade = { ...template, owner: this.monitoredTrader };
-      this.handleEvent(this.monitoredTrader, myTrade);
-    } else if (rand > 0.8) {
-      const myTrade = { ...template, owner: this.bogusTrader };
-      this.handleEvent(this.bogusTrader, myTrade);
+      this.handleEvent(this.monitoredTrader, { ...template, owner: this.monitoredTrader });
     } else {
-      throw new Error(`wtf ${rand}???`);
+      this.handleEvent(this.bogusTrader, { ...template, owner: this.bogusTrader });
     }
     this.tickCnt += 1;
   }

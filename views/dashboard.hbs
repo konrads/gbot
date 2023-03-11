@@ -19,14 +19,22 @@
         <tr><td><strong>Cash</strong></td>{{#each assets}}<td><div class="cash">{{cash positionCash}}</div></td>{{/each}}</tr>
     </table>
 
-    <h2>Trades</h2>
+    <h2>My trades</h2>
     <table>
-        <tr><th><strong>Ts</strong></th><th><strong>Trade</strong></th></tr>{{#each trades}}
+        <tr><th><strong>Ts</strong></th><th><strong>Trade</strong></th></tr>{{#each myTrades}}
+        <tr><td>{{ts}}</td><td>{{trade}}</td></tr>{{/each}}
+    </table>
+
+    <h2>Monitored trades</h2>
+    <table>
+        <tr><th><strong>Ts</strong></th><th><strong>Trade</strong></th></tr>{{#each monitoredTrades}}
         <tr><td>{{ts}}</td><td>{{trade}}</td></tr>{{/each}}
     </table>
 
     <br></br>
-    *PNL: {{cash pnl}}
+    *My PNL: {{cash myPnl}}
+    <br></br>
+    *Monitored PNL: {{cash monitoredPnl}}
     <br></br>
     *Network: {{network}}
     <br></br>

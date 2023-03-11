@@ -54,24 +54,24 @@ export class Orchestrator {
         if (!openTrade.status && event.status == "placed") {
           // record new trade
           o.status = "placed";
-          this.state.setTrade(o);
+          this.state.setMyTrade(o);
           effectRunner = async () => await this.notifier.publish(`My trade placed: ${JSON.stringify(o)}`);
         } else if ([undefined, "placed"].includes(openTrade.status) && event.status == "filled") {
           // fill
           o.openPrice = event.openPrice;
           o.status = "filled";
-          this.state.setTrade(o);
+          this.state.setMyTrade(o);
           effectRunner = async () => await this.notifier.publish(`My trade filled: ${JSON.stringify(o)}`);
         } else if ([undefined, "placed"].includes(openTrade.status) && event.status == "cancelled") {
           // cancel
           o.status = "cancelled";
-          this.state.setTrade(o);
+          this.state.setMyTrade(o);
           effectRunner = async () => await this.notifier.publish(`My trade cancelled: ${JSON.stringify(o)}`);
         } else if (openTrade.status == "filled" && event.status == "closed") {
           // close
           o.closePrice = event.closePrice;
           o.status = "closed";
-          this.state.setTrade(o);
+          this.state.setMyTrade(o);
           effectRunner = async () => await this.notifier.publish(`My trade closed: ${JSON.stringify(o)}`);
         } else {
           log.warn(`Unexpected event ${JSON.stringify(event)} for current trade ${openTrade}`);
@@ -88,10 +88,12 @@ export class Orchestrator {
             owner: myPublicKey,
             clientTradeId: this.idCreate(),
           };
-          this.state.setTrade(tradeCopy);
+          this.state.setMyTrade(tradeCopy);
+          this.state.setMonitoredTrade(event);
           effectRunner = async () => await this.trader.createTrade({ ...tradeCopy });
         } else if (openTrade?.status == "filled" && event.status == "closed") {
           // issue trade close
+          this.state.setMonitoredTrade(event);
           effectRunner = async () => await this.trader.closeTrade(openTrade.clientTradeId);
         } else {
           log.info(`Ignoring event from monitored trader: ${JSON.stringify(event)}, openTrade: ${JSON.stringify(openTrade)}`);

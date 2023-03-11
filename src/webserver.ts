@@ -22,7 +22,8 @@ export function startExpress(config: Config, state: State) {
       now: new Date().toLocaleString(),
       refresh: req.query.refresh ?? 10,
       network: config.network,
-      pnl: state.pnl,
+      myPnl: state.myPnl,
+      monitoredPnl: state.monitoredPnl,
 
       assets: state.assets.map((asset) => {
         const price = state.getPrice(asset);
@@ -36,10 +37,16 @@ export function startExpress(config: Config, state: State) {
           positionCash,
         };
       }),
-      orders: state.myTrades.map(([ts, order]) => {
+      myTrades: state.myTrades.map(([ts, trade]) => {
         return {
           ts: new Date(ts).toLocaleString(),
-          order: `${order.asset}: ${order.dir} ${order.amount} @ ${order.openPrice}: ${order.status}, ${order.clientTradeId}`,
+          order: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${trade.openPrice}: ${trade.status}, ${trade.clientTradeId}`,
+        };
+      }),
+      monitoredTrades: state.monitoredTrades.map(([ts, trade]) => {
+        return {
+          ts: new Date(ts).toLocaleString(),
+          order: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${trade.openPrice}: ${trade.status}, ${trade.clientTradeId}`,
         };
       }),
     };
