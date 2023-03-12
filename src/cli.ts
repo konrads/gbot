@@ -83,7 +83,24 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
       const trades = await gtrade.getOpenTrades(pair);
-      log.info(`open trades:\n${trades.join("\n")}`);
+      log.info(`open trades:\n${trades.map((x) => JSON.stringify(x)).join("\n")}`);
+    },
+  });
+
+  const getOpenTradesInfo = cmdts.command({
+    name: "getOpenTrades",
+    args: {
+      pair: cmdts.option({
+        type: cmdts.string,
+        long: "pair",
+        defaultValue: () => "btc",
+      }),
+    },
+    handler: async ({ pair }) => {
+      const config = loadConfig();
+      const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
+      const trades = await gtrade.getOpenTradesInfo(pair);
+      log.info(`open trades:\n${trades.map((x) => JSON.stringify(x)).join("\n")}`);
     },
   });
 
@@ -184,6 +201,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       showKeys,
       gTradeStats,
       getOpenTrades,
+      getOpenTradesInfo,
       approveAllowance,
       issueTrade,
       closeTrade,

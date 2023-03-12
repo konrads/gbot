@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { Dir } from "../types";
 import { range } from "../utils";
 import { ERC20_ABI, STORAGE_ABI, TRADING_ABI } from "./abi";
 
@@ -148,7 +149,40 @@ export class GTrade {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.openTrades(this.signer.address, pairIndex, i)));
-    return res;
+    const asTrades = res.map((x) => {
+      return {
+        owner: x.trader,
+        asset: GTRADE_PAIRS[Number(x.pairIndex)],
+        index: Number(x.index),
+        initialPosToken: Number(x.initialPosToken) / 10 ** 18,
+        positionSizeDai: Number(x.positionSizeDai) / 10 ** 18,
+        openPrice: Number(x.openPrice) / 10 ** 10,
+        buy: x.buy,
+        leverage: Number(x.leverage),
+        tp: Number(x.tp) / 10 ** 10, // FIXME: revisit, seems wrong
+        sl: Number(x.sl) / 10 ** 10, // FIXME: revisit, seems wrong
+      };
+    });
+    return asTrades;
+  }
+
+  // Not sure the purpose...
+  async getOpenTradesInfo(pair: string, cnt?: number): Promise<any[]> {
+    cnt = cnt ?? (await this.getOpenTradeCount(pair));
+    const pairIndex = GTRADE_PAIRS.indexOf(pair);
+    if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
+    const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.openTradesInfo(this.signer.address, pairIndex, i)));
+    const asInfos = res.map((x) => {
+      return {
+        tokenId: Number(x.tokenId),
+        tokenPriceDai: Number(x.tokenPriceDai) / 10 ** 10,
+        openInterestDai: Number(x.openInterestDai) / 10 ** 18,
+        tpLastUpdated: Number(x.tpLastUpdated) / 10 ** 10,
+        slLastUpdated: Number(x.slLastUpdated) / 10 ** 10,
+        beingMarketClosed: Number(x.beingMarketClosed) / 10 ** 10,
+      };
+    });
+    return asInfos;
   }
 
   async issueTrade(
@@ -156,10 +190,11 @@ export class GTrade {
     size: number,
     price: number,
     leverage: number,
-    dir: "buy" | "sell",
-    /* clientTradeId: number, */ takeProfit?: number,
+    dir: Dir,
+    /* clientTradeId: number, */
+    takeProfit?: number,
     stopLoss?: number,
-    orderIndex: number = 0,
+    tradeIndex: number = 0,
     slippage: number = 0.01
   ): Promise<any> {
     // FIXME: inject clientTradeId!
@@ -179,7 +214,7 @@ export class GTrade {
     let order = {
       trader: this.signer.address,
       pairIndex,
-      index: orderIndex,
+      index: tradeIndex,
       initialPosToken,
       positionSizeDai,
       openPrice,
@@ -194,10 +229,14 @@ export class GTrade {
     return res;
   }
 
-  async closeTrade(pair: string, tradeInd: number): Promise<any> {
+  async closeTrade(pair: string, tradeIndex: number): Promise<any> {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
-    const res = await (await this.getTradingContract()).closeTradeMarket(pairIndex, tradeInd);
+    const res = await (await this.getTradingContract()).closeTradeMarket(pairIndex, tradeIndex);
     return res;
+  }
+
+  async shutdown() {
+    // TODO: shut down subscriptions
   }
 }

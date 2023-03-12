@@ -24,10 +24,6 @@ export class Trader {
     throw new Error("closeTrade unimplemented!!!");
   }
 
-  async subscribeEvents(callback: (address: Address, data: any) => Promise<void>): Promise<void> {
-    throw new Error("subscribeEvents unimplemented!!!");
-  }
-
   async shutdown() {
     this.isShuttingDown = true;
   }
