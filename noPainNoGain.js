@@ -48,7 +48,6 @@ let run = async function() {
 	//this one is used for placing orders
 	tradingContract = new ethers.Contract(tradingAddress, TRADING_ABI, signer);
 
-
 	tradingContract.on("MarketOrderInitiated", (orderId, trader, pairIndex, open) => {
 		console.log("MarketOrderInitiated", orderId, trader, pairIndex, open);
 		// The event object contains the verbatim log data, the
@@ -56,6 +55,24 @@ let run = async function() {
 		// transaction and receipt and event functions
 
 		//MarketOrderInitiated (index_topic_1 uint256 orderId, index_topic_2 address trader, index_topic_3 uint256 pairIndex, bool open)
+
+		// openTrade
+		// MarketOrderInitiated BigNumber { _hex: '0x0131f4', _isBigNumber: true } 0x5444C3377842568E5cCd77Df6F8b26C2c2eF3878 BigNumber { _hex: '0x15', _isBigNumber: true } false
+		// open -> false
+
+		// closeTradeMarket
+		// MarketOrderInitiated BigNumber { _hex: '0x0131f5', _isBigNumber: true } 0x5444C3377842568E5cCd77Df6F8b26C2c2eF3878 BigNumber { _hex: '0x15', _isBigNumber: true } true
+		// open -> true
+
+		//other possible events:
+		// CouldNotCloseTrade (index_topic_1 address trader, index_topic_2 uint256 pairIndex, uint256 index)
+		// TpUpdated (index_topic_1 address trader, index_topic_2 uint256 pairIndex, uint256 index, uint256 newTp)
+		// OpenLimitPlaced (index_topic_1 address trader, index_topic_2 uint256 pairIndex, uint256 index)
+		// OpenLimitCanceled (index_topic_1 address trader, index_topic_2 uint256 pairIndex, uint256 index)
+		// Done
+		// SlUpdated
+		// OpenLimitUpdated
+
 	});
 
 	priceAggregatorAddress = await storageContract.priceAggregator();
