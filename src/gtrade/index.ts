@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { Dir } from "../types";
+import { hexZeroPad } from "ethers/lib/utils";
+import { CouldNotCloseTrade, Dir, MarketOrderInitiated } from "../types";
 import { range } from "../utils";
 import { ERC20_ABI, STORAGE_ABI, TRADING_ABI } from "./abi";
 
@@ -86,13 +87,14 @@ export class GTrade {
   private readonly signer: ethers.Wallet;
   private readonly daiContract: ethers.Contract;
   private readonly storageContract: ethers.Contract;
-  private readonly provider: ethers.Provider;
+  private readonly provider: ethers.providers.Provider;
+  private _tradingAddress: string;
   private _tradingContract: ethers.Contract;
 
   constructor(privKey: string, chainSpec: ChainSpec, referrer: string = "0x0000000000000000000000000000000000000000") {
     this.chainSpec = chainSpec;
     this.referrer = referrer;
-    this.provider = new ethers.WebSocketProvider(chainSpec.rpcUrl);
+    this.provider = new ethers.providers.WebSocketProvider(chainSpec.rpcUrl);
     this.signer = new ethers.Wallet(privKey, this.provider);
     this.daiContract = new ethers.Contract(chainSpec.daiAddress, ERC20_ABI, this.signer);
     this.storageContract = new ethers.Contract(chainSpec.storageAddress, STORAGE_ABI, this.signer);
@@ -196,7 +198,7 @@ export class GTrade {
     stopLoss?: number,
     tradeIndex: number = 0,
     slippage: number = 0.01
-  ): Promise<any> {
+  ): Promise<ethers.providers.TransactionReceipt> {
     // FIXME: inject clientTradeId!
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
@@ -226,14 +228,43 @@ export class GTrade {
 
     const tradingContract = await this.getTradingContract();
     const res = await tradingContract.openTrade(order, orderType, spreadReductionId, slippage, this.referrer);
-    return res;
+    const receipt = await res.wait();
+    return receipt;
   }
 
-  async closeTrade(pair: string, tradeIndex: number): Promise<any> {
+  async closeTrade(pair: string, tradeIndex: number): Promise<ethers.providers.TransactionReceipt> {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     const res = await (await this.getTradingContract()).closeTradeMarket(pairIndex, tradeIndex);
-    return res;
+    const receipt = await res.wait();
+    return receipt;
+  }
+
+  async subscribe(traderAddresses: string[], callback: (event: MarketOrderInitiated | CouldNotCloseTrade) => Promise<void>) {
+    const tradingContract = await this.getTradingContract();
+    const filter1 = {
+      topics: [ethers.utils.id("MarketOrderInitiated(uint256,address,uint256,bool)"), null, traderAddresses.map((addr) => hexZeroPad(addr, 32))],
+    };
+    tradingContract.on(filter1, async (orderId: BigInt, trader: string, pairIndex: BigInt, open: boolean) => {
+      const event: MarketOrderInitiated = {
+        orderId: Number(orderId),
+        trader,
+        pairIndex: Number(pairIndex),
+        open,
+      };
+      await callback(event);
+    });
+    const filter2 = {
+      topics: [ethers.utils.id("CouldNotCloseTrade(address,uint256,uint256)"), traderAddresses.map((addr) => hexZeroPad(addr, 32))],
+    };
+    tradingContract.on(filter2, async (trader: string, pairIndex: BigInt, index: BigInt) => {
+      const event: CouldNotCloseTrade = {
+        trader,
+        pairIndex: Number(pairIndex),
+        index: Number(index),
+      };
+      await callback(event);
+    });
   }
 
   async shutdown() {

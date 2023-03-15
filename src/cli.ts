@@ -63,6 +63,7 @@ async function main() {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
       log.info(`========== gTrade stats ==========
+pubkey:          ${config.wallet.address}
 allowance:       ${await gtrade.getAllowance()}
 balance:         ${await gtrade.getBalance()}
 daiBalance:      ${await gtrade.getDaiBalance()}
@@ -166,8 +167,8 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const config = loadConfig();
       console.log(`Issuing trade as ${config.wallet.address}`);
       const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
-      const res = await gtrade.issueTrade(pair, size, price, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
-      log.info(`issueTrade hash ${res.hash}`);
+      const receipt = await gtrade.issueTrade(pair, size, price, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
+      log.info(`issueTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
     },
   });
 
@@ -188,8 +189,30 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     handler: async ({ orderIndex, pair }) => {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
-      const res = await gtrade.closeTrade(pair, orderIndex);
-      log.info(`closeTrade hash ${res.hash}`);
+      const receipt = await gtrade.closeTrade(pair, orderIndex);
+      log.info(`closeTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
+    },
+  });
+
+  const subscribe = cmdts.command({
+    name: "subscribe",
+    args: {
+      addresses: cmdts.positional({
+        type: cmdts.string,
+        displayName: "addresses",
+      }),
+      sleepMs: cmdts.option({
+        type: cmdts.number,
+        long: "sleepMs",
+        defaultValue: () => 300_000,
+      }),
+    },
+    handler: async ({ addresses, sleepMs }) => {
+      const addressez = addresses.split(",").map((x) => x.trim());
+      const config = loadConfig();
+      const gtrade = new GTrade(config.wallet.privateKey, MUMBAI_SPEC);
+      await gtrade.subscribe(addressez, async (event) => console.log(`event received ${JSON.stringify(event)}`));
+      await sleep(sleepMs);
     },
   });
 
@@ -205,6 +228,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       approveAllowance,
       issueTrade,
       closeTrade,
+      subscribe,
     },
   });
 

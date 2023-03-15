@@ -1,3 +1,5 @@
+import { boolean } from "cmd-ts";
+
 export interface Price {
   price: number;
   ts: Date;
@@ -16,6 +18,19 @@ export interface Trade {
   closePrice?: number;
 }
 
+export interface GTrade {
+  trader: string;
+  pairIndex: number;
+  index: number;
+  initialPosToken: number;
+  positionSizeDai: number;
+  openPrice: number;
+  buy: boolean;
+  leverage: number;
+  tp?: number;
+  sl?: number;
+}
+
 export type EventType = "tradePlaced" | "tradeCancelled" | "tradeFilled" | "tradeClosed";
 
 export type Dir = "buy" | "sell";
@@ -27,3 +42,16 @@ export type Address = string;
 export type Asset = string;
 
 export type TradeId = number;
+
+export interface MarketOrderInitiated {
+  orderId: number;
+  trader: string;
+  pairIndex: number;
+  open: boolean;
+}
+
+export interface CouldNotCloseTrade {
+  trader: string;
+  pairIndex: number;
+  index: number;
+}
