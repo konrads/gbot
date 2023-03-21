@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { hexZeroPad } from "ethers/lib/utils";
-import { CouldNotCloseTrade, Dir, MarketOrderInitiated } from "../types";
+import { CouldNotCloseTrade, Dir, MarketOrderInitiated, PriceReceived } from "../types";
 import { range } from "../utils";
-import { ERC20_ABI, STORAGE_ABI, TRADING_ABI } from "./abi";
+import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI } from "./abi";
 
 export interface ChainSpec {
   daiAddress: string;
@@ -27,6 +27,19 @@ export const MUMBAI_SPEC: ChainSpec = {
   storageAddress: "0x4d2df485c608aa55a23d8d98dd2b4fa24ba0f2cf",
   rpcUrl: "wss://polygon-mumbai.g.alchemy.com/v2/US6ybgcQC9-FpHhr0TOiBN35NKYH18r5",
 };
+
+export function getChainSpec(id: "polygon" | "arbitrum" | "mumbai"): ChainSpec {
+  switch (id.toLowerCase()) {
+    case "polygon":
+      return POLYGON_SPEC;
+    case "arbitrum":
+      return ARBITRUM_SPEC;
+    case "mumbai":
+      return MUMBAI_SPEC;
+    default:
+      throw new Error(`Invalid chain spec ${id}`);
+  }
+}
 
 export enum GtradeOrderType {
   Market = 0,
@@ -88,8 +101,8 @@ export class GTrade {
   private readonly daiContract: ethers.Contract;
   private readonly storageContract: ethers.Contract;
   private readonly provider: ethers.providers.Provider;
-  private _tradingAddress: string;
   private _tradingContract: ethers.Contract;
+  private _priceAggregatorContract: ethers.Contract;
 
   constructor(privKey: string, chainSpec: ChainSpec, referrer: string = "0x0000000000000000000000000000000000000000") {
     this.chainSpec = chainSpec;
@@ -107,6 +120,16 @@ export class GTrade {
     }
     return this._tradingContract;
   }
+
+  private async getPriceAggregatorContract(): Promise<ethers.Contract> {
+    if (!this._priceAggregatorContract) {
+      const priceAggregatorAddress = await this.storageContract.priceAggregator();
+      this._priceAggregatorContract = new ethers.Contract(priceAggregatorAddress, PRICE_AGGREGATOR_ABI, this.signer);
+    }
+    return this._priceAggregatorContract;
+  }
+
+  priceAggregator;
 
   async getBalance(): Promise<number> {
     const res = Number(await this.provider.getBalance(this.signer.address)) / 10 ** 18;
@@ -240,7 +263,7 @@ export class GTrade {
     return receipt;
   }
 
-  async subscribe(traderAddresses: string[], callback: (event: MarketOrderInitiated | CouldNotCloseTrade) => Promise<void>) {
+  async subscribeTradingEvents(traderAddresses: string[], callback: (event: MarketOrderInitiated | CouldNotCloseTrade) => Promise<void>) {
     const tradingContract = await this.getTradingContract();
     const filter1 = {
       topics: [ethers.utils.id("MarketOrderInitiated(uint256,address,uint256,bool)"), null, traderAddresses.map((addr) => hexZeroPad(addr, 32))],
@@ -265,6 +288,49 @@ export class GTrade {
       };
       await callback(event);
     });
+  }
+
+  async subscribeAggregatorEvents(callback: (event: PriceReceived) => Promise<void>) {
+    const aggContract = await this.getPriceAggregatorContract();
+    await aggContract.on(
+      "PriceReceived",
+      async (request: string, orderId: BigInt, node: string, pairIndex: BigInt, price: BigInt, referencePrice: BigInt, linkFee: BigInt) => {
+        const event: PriceReceived = {
+          request,
+          orderId: Number(orderId),
+          node,
+          pairIndex: Number(pairIndex),
+          price: Number(price) / 10 ** 10,
+          referencePrice: Number(referencePrice) / 10 ** 10,
+          linkFee: Number(linkFee) / 10 ** 10,
+        };
+        await callback(event);
+      }
+    );
+  }
+
+  /**
+   * Warning: does not work
+   * on getPrice(), getting error TRADING_ONLY
+   * this is due to: https://github.com/GainsNetwork/gTrade-v6/blob/main/contracts/GNSPriceAggregatorV6.sol#L73
+   * modifier onlyTrading(){ require(msg.sender == storageT.trading(), "TRADING_ONLY"); _; }
+   * StorageInterfaceV5 constant storageT = StorageInterfaceV5(0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD);
+   * but looking at https://polygonscan.com/address/0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD#code, I don't see any trading()... But I do see onlyTrading() again:
+   * modifier onlyTrading(){ require(isTradingContract[msg.sender] && token.hasRole(MINTER_ROLE, msg.sender)); _; }
+   * as set by:
+   * function addTradingContract(address _trading) external onlyGov{
+   *     ...
+   *     isTradingContract[_trading] = true;
+   *     ...
+   * }
+   * ie. getPrice() can only be used by trading contract?
+   */
+  async getPrice(pair: string): Promise<number> {
+    const pairIndex = GTRADE_PAIRS.indexOf(pair);
+    const aggContract = await this.getPriceAggregatorContract();
+    const resp = await aggContract.getPrice(pairIndex, 0, 1000); // throws error...
+    console.log(`##### ${JSON.stringify(resp)}`);
+    return 0;
   }
 
   async shutdown() {

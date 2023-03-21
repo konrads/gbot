@@ -55,3 +55,13 @@ export interface CouldNotCloseTrade {
   pairIndex: number;
   index: number;
 }
+
+export interface PriceReceived {
+  request: string;
+  orderId: number;
+  node: string;
+  pairIndex: number;
+  price: number; // Note: this seems to be the actual price
+  referencePrice: number;
+  linkFee: number;
+}
