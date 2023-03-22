@@ -2,43 +2,47 @@ import { ethers } from "ethers";
 import { hexZeroPad } from "ethers/lib/utils";
 import { CouldNotCloseTrade, Dir, MarketOrderInitiated, PriceReceived } from "../types";
 import { range } from "../utils";
-import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI } from "./abi";
+import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI, AGGREGATOR_PROXY_ABI } from "./abi";
 
 export interface ChainSpec {
+  id: string;
   daiAddress: string;
   storageAddress: string;
   rpcUrl: string;
+  pairs: { index: number; pair: string; aggregatorProxyAddress: string; decimals?: number }[];
 }
 
 export const POLYGON_SPEC: ChainSpec = {
+  id: "polygon",
   daiAddress: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
   storageAddress: "0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD",
   rpcUrl: "wss://polygon.llamarpc.com",
+  pairs: [],
 };
 
 export const ARBITRUM_SPEC: ChainSpec = {
+  id: "arbitrum",
   daiAddress: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
   storageAddress: "0xcFa6ebD475d89dB04cAd5A756fff1cb2BC5bE33c",
   rpcUrl: "wss://arb-mainnet.g.alchemy.com/v2/BnencMGjoPsmbRIjrDZvh4zLTmlZyDtG",
+  pairs: [],
 };
 
 export const MUMBAI_SPEC: ChainSpec = {
+  id: "mumbai",
   daiAddress: "0x04b2a6e51272c82932ecab31a5ab5ac32ae168c3",
   storageAddress: "0x4d2df485c608aa55a23d8d98dd2b4fa24ba0f2cf",
   rpcUrl: "wss://polygon-mumbai.g.alchemy.com/v2/US6ybgcQC9-FpHhr0TOiBN35NKYH18r5",
+  pairs: [
+    { index: 0, pair: "btc", aggregatorProxyAddress: "0x11e187fd2c832a95bdd78a46dda774d5821e7569" },
+    { index: 1, pair: "eth", aggregatorProxyAddress: "0xb4ccb58dd3d35530e54b631ac0561f0c6d424d38" },
+  ],
 };
 
 export function getChainSpec(id: "polygon" | "arbitrum" | "mumbai"): ChainSpec {
-  switch (id.toLowerCase()) {
-    case "polygon":
-      return POLYGON_SPEC;
-    case "arbitrum":
-      return ARBITRUM_SPEC;
-    case "mumbai":
-      return MUMBAI_SPEC;
-    default:
-      throw new Error(`Invalid chain spec ${id}`);
-  }
+  const spec = [POLYGON_SPEC, ARBITRUM_SPEC, MUMBAI_SPEC].find((x) => x.id == id);
+  if (!spec) throw new Error(`Invalid chain spec ${id}`);
+  return spec;
 }
 
 export enum GtradeOrderType {
@@ -129,8 +133,6 @@ export class GTrade {
     return this._priceAggregatorContract;
   }
 
-  priceAggregator;
-
   async getBalance(): Promise<number> {
     const res = Number(await this.provider.getBalance(this.signer.address)) / 10 ** 18;
     return res;
@@ -210,27 +212,60 @@ export class GTrade {
     return asInfos;
   }
 
+  async getOraclePrice(pair: string): Promise<number> {
+    const pairInfo = this.chainSpec.pairs.find((x) => x.pair.toLowerCase() == pair.toLowerCase());
+    if (!pairInfo) throw new Error(`Undefined pair `);
+    const proxyContract = new ethers.Contract(pairInfo.aggregatorProxyAddress, AGGREGATOR_PROXY_ABI, this.signer);
+    const decimals = pairInfo.decimals ?? Number(await proxyContract.decimals());
+    pairInfo.decimals = decimals;
+    const resp = (await proxyContract.latestAnswer()) / 10 ** decimals;
+    return resp;
+  }
+
+  async issueMarketTrade(
+    pair: string,
+    size: number,
+    leverage: number,
+    dir: Dir,
+    takeProfit?: number,
+    stopLoss?: number,
+    tradeIndex: number = 0,
+    slippage: number = 0.01
+  ): Promise<ethers.providers.TransactionReceipt> {
+    const oraclePrice = await this.getOraclePrice(pair);
+    let price: number;
+    switch (dir) {
+      case "buy":
+        price = oraclePrice * 1.01;
+        break;
+      case "sell":
+        price = oraclePrice / 1.01;
+        break;
+      default:
+        throw new Error(`Invalid dir ${dir}`);
+    }
+    return await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage);
+  }
+
   async issueTrade(
     pair: string,
     size: number,
     price: number,
     leverage: number,
     dir: Dir,
-    /* clientTradeId: number, */
     takeProfit?: number,
     stopLoss?: number,
     tradeIndex: number = 0,
     slippage: number = 0.01
   ): Promise<ethers.providers.TransactionReceipt> {
-    // FIXME: inject clientTradeId!
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     let initialPosToken = 0;
     let positionSizeDai = BigInt(size * 10 ** 18);
-    let openPrice = price * 10 ** 10;
+    let openPrice = BigInt(Math.round(price * 10 ** 10));
     let buy = dir == "buy";
-    takeProfit = (takeProfit ?? dir == "buy" ? price * 5 : 0) * 10 ** 10;
-    stopLoss = (stopLoss ?? dir == "buy" ? 0 : price * 5) * 10 ** 10;
+    takeProfit = (takeProfit ?? (dir == "buy" ? price * 5 : 0)) * 10 ** 10;
+    stopLoss = (stopLoss ?? (dir == "buy" ? 0 : price * 5)) * 10 ** 10;
     slippage = slippage * 10 ** 12;
 
     let orderType = 0;
@@ -307,30 +342,6 @@ export class GTrade {
         await callback(event);
       }
     );
-  }
-
-  /**
-   * Warning: does not work
-   * on getPrice(), getting error TRADING_ONLY
-   * this is due to: https://github.com/GainsNetwork/gTrade-v6/blob/main/contracts/GNSPriceAggregatorV6.sol#L73
-   * modifier onlyTrading(){ require(msg.sender == storageT.trading(), "TRADING_ONLY"); _; }
-   * StorageInterfaceV5 constant storageT = StorageInterfaceV5(0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD);
-   * but looking at https://polygonscan.com/address/0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD#code, I don't see any trading()... But I do see onlyTrading() again:
-   * modifier onlyTrading(){ require(isTradingContract[msg.sender] && token.hasRole(MINTER_ROLE, msg.sender)); _; }
-   * as set by:
-   * function addTradingContract(address _trading) external onlyGov{
-   *     ...
-   *     isTradingContract[_trading] = true;
-   *     ...
-   * }
-   * ie. getPrice() can only be used by trading contract?
-   */
-  async getPrice(pair: string): Promise<number> {
-    const pairIndex = GTRADE_PAIRS.indexOf(pair);
-    const aggContract = await this.getPriceAggregatorContract();
-    const resp = await aggContract.getPrice(pairIndex, 0, 1000); // throws error...
-    console.log(`##### ${JSON.stringify(resp)}`);
-    return 0;
   }
 
   async shutdown() {

@@ -28,6 +28,11 @@ const SLEEP_MS = cmdts.option({
   long: "sleepMs",
   defaultValue: () => 10 * 60 * 1000, // 10 mins
 });
+const DIR = cmdts.option({
+  type: cmdts.string,
+  long: "dir",
+  defaultValue: () => "buy",
+});
 
 async function main() {
   const publishNotification = cmdts.command({
@@ -158,11 +163,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
         long: "leverage",
         defaultValue: () => 1,
       }),
-      dir: cmdts.option({
-        type: cmdts.string,
-        long: "dir",
-        defaultValue: () => "buy",
-      }),
+      dir: DIR,
       takeProfit: cmdts.option({
         type: cmdts.number,
         long: "takeProfit",
@@ -181,6 +182,51 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
       const receipt = await gtrade.issueTrade(pair, size, price, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
       log.info(`issueTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
+    },
+  });
+
+  const issueMarketTrade = cmdts.command({
+    name: "issueMarketTrade",
+    args: {
+      orderIndex: cmdts.option({
+        type: cmdts.number,
+        long: "orderIndex",
+        defaultValue: () => 0,
+      }),
+      pair: PAIR,
+      size: cmdts.option({
+        type: cmdts.number,
+        long: "size",
+      }),
+      slippage: cmdts.option({
+        type: cmdts.number,
+        long: "slippage",
+        defaultValue: () => 0,
+      }),
+      leverage: cmdts.option({
+        type: cmdts.number,
+        long: "leverage",
+        defaultValue: () => 1,
+      }),
+      dir: DIR,
+      takeProfit: cmdts.option({
+        type: cmdts.number,
+        long: "takeProfit",
+        defaultValue: () => undefined,
+      }),
+      stopLoss: cmdts.option({
+        type: cmdts.number,
+        long: "stopLoss",
+        defaultValue: () => undefined,
+      }),
+      chain: CHAIN,
+    },
+    handler: async ({ orderIndex, pair, size, slippage, leverage, dir, takeProfit, stopLoss, chain }) => {
+      const config = loadConfig();
+      console.log(`Issuing trade as ${config.wallet.address}`);
+      const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
+      const receipt = await gtrade.issueMarketTrade(pair, size, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
+      log.info(`issueMarketTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
     },
   });
 
@@ -238,20 +284,66 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     },
   });
 
-  /**
-   * Warning, doesn't work, see gtrade.getPrice()
-   */
   const getPrice = cmdts.command({
     name: "getPrice",
     args: {
-      pair: PAIR,
       chain: CHAIN,
+      pair: PAIR,
     },
-    handler: async ({ pair, chain }) => {
+    handler: async ({ chain, pair }) => {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
-      const price = await gtrade.getPrice(pair);
-      log.info(`price for ${pair} = ${price}`);
+      const price = await gtrade.getOraclePrice(pair);
+      console.log(`${pair} = $${price}`);
+    },
+  });
+
+  const perpetualOpenClose = cmdts.command({
+    name: "perpetualOpenClose",
+    args: {
+      chain: CHAIN,
+      dir: DIR,
+      pair: PAIR,
+    },
+    handler: async ({ chain, dir, pair }) => {
+      const config = loadConfig();
+      const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
+      const size = 100;
+      const leverage = 20;
+      const stopLoss = dir == "buy" ? 0 : 100_000;
+      const takeProfit = dir == "buy" ? 100_000 : 0;
+      const MAX_TRADES = 100;
+      const MAX_WAITS = 10;
+      for (var i = 0; i < MAX_TRADES; i++) {
+        const oraclePrice = await gtrade.getOraclePrice(pair);
+        log.info(`${i}. Opening trade on ${pair}, oraclePrice: ${oraclePrice}, size: ${size}, dir: ${dir}, tp: ${takeProfit}, sl: ${stopLoss}`);
+        await gtrade.issueMarketTrade(pair, size, leverage, dir as any, takeProfit, stopLoss);
+
+        // validate 1 trade exists
+        for (var j = 0; j < MAX_WAITS; j++) {
+          const tradeCnt = await gtrade.getOpenTradeCount(pair);
+          log.info(`  ${pair} trade count: ${tradeCnt}`);
+          if (tradeCnt == 1) break;
+          else {
+            log.info(`  ...unexpected tradeCnt, waiting 1s`);
+            await sleep(1000);
+          }
+        }
+
+        log.info(`${i}. Closing trade on ${pair}`);
+        await gtrade.closeTrade(pair, 0);
+
+        // validate 0 trade exists
+        for (var j = 0; j < MAX_WAITS; j++) {
+          const tradeCnt = await gtrade.getOpenTradeCount(pair);
+          log.info(`  ${pair} trade count: ${tradeCnt}`);
+          if (tradeCnt == 0) break;
+          else {
+            log.info(`  ...unexpected tradeCnt, waiting 1s`);
+            await sleep(1000);
+          }
+        }
+      }
     },
   });
 
@@ -266,10 +358,12 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       getOpenTradesInfo,
       approveAllowance,
       issueTrade,
+      issueMarketTrade,
       closeTrade,
       subscribeTradingEvents,
       subscribeAggregatorEvents,
       getPrice,
+      perpetualOpenClose,
     },
   });
 

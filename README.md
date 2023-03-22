@@ -40,6 +40,7 @@ src/cli.ts gTradeStats
 src/cli.ts issueTrade --pair btc --price 23390 --size 100 --leverage 20 --stopLoss 0 --takeProfit 23500 --slippage 0.01             # buy:  price > mark
 src/cli.ts issueTrade --pair btc --price 23350 --size 100 --leverage 20 --stopLoss 23500 --takeProfit 0 --slippage 0.01 --dir sell  # sell: price < mark
 src/cli.ts issueTrade --pair eth --price 1641 --size 100 --leverage 20 --stopLoss 0 --takeProfit 1650 --slippage 0.01
+src/cli.ts issueMarketTrade --pair eth --size 100 --leverage 20 --stopLoss 0 --takeProfit 1650 --slippage 0.01
 src/cli.ts getOpenTrades --pair eth
 src/cli.ts closeTrade --pair eth --orderIndex 0
 ```

@@ -5,7 +5,6 @@ import { State } from "./state";
 import { Notifier } from "./notifications";
 import { ITrader } from "./trader";
 import { log } from "./log";
-import { idCreator } from "./utils";
 import { Address, Trade } from "./types";
 import { Mutex } from "async-mutex";
 
@@ -14,7 +13,6 @@ export class Orchestrator {
   private state: State;
   private trader: ITrader;
   private notifier: Notifier;
-  private idCreate: () => number;
   private lock: Mutex;
 
   constructor(config: Config, state: State, trader: ITrader, notifier: Notifier, idCreate?: () => number) {
@@ -22,7 +20,6 @@ export class Orchestrator {
     this.notifier = notifier;
     this.state = state;
     this.trader = trader;
-    this.idCreate = idCreate ?? idCreator(Date.now());
     this.lock = new Mutex();
   }
 
@@ -86,7 +83,6 @@ export class Orchestrator {
             leverage,
             openPrice: event.openPrice,
             owner: myPublicKey,
-            clientTradeId: this.idCreate(),
           };
           this.state.setMyTrade(tradeCopy);
           this.state.setMonitoredTrade(event);
