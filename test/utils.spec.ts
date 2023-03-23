@@ -50,6 +50,9 @@ describe("utils", function () {
     x = 0;
     assert.strictEqual(0, toFixed(x, 2));
 
+    x = -0;
+    assert.strictEqual(0, toFixed(x, 2));
+
     x = 0.001;
     assert.strictEqual(0, toFixed(x, 2));
   });

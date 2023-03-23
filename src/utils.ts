@@ -1,6 +1,6 @@
 import fs from "fs";
-import { GasPriceOracle } from "gas-price-oracle";
-import { EstimatedGasPrice } from "gas-price-oracle/lib/services";
+// import { GasPriceOracle } from "gas-price-oracle";
+// import { EstimatedGasPrice } from "gas-price-oracle/lib/services";
 
 export function toDDMMMYY(date: Date): string {
   const months = [`JAN`, `FEB`, `MAR`, `APR`, `MAY`, `JUN`, `JUL`, `AUG`, `SEP`, `OCT`, `NOV`, `DEC`];
@@ -64,14 +64,14 @@ export function randomPlusPerc(base: number, perc: number): number {
   return base + base * perc * 2 * (Math.random() - 0.5);
 }
 
-export async function getGasPrice(): Promise<EstimatedGasPrice> {
-  const oracle = new GasPriceOracle({ chainId: 137 }); // Polygon
-  return await oracle.eip1559.estimateFees({
-    maxFeePerGas: 20,
-    maxPriorityFeePerGas: 3,
-    baseFee: undefined,
-  });
-}
+// export async function getGasPrice(): Promise<EstimatedGasPrice> {
+//   const oracle = new GasPriceOracle({ chainId: 137 }); // Polygon
+//   return await oracle.eip1559.estimateFees({
+//     maxFeePerGas: 20,
+//     maxPriorityFeePerGas: 3,
+//     baseFee: undefined,
+//   });
+// }
 
 export function range(n: number): number[] {
   return [...Array(n).keys()];
