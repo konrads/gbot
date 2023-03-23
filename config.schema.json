@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "properties": {
-    "traderChainSpec": {"type": "string", "enum": ["polygon", "arbitrum", "mumbai"]},
-    "listenerChainSpec": {"type": "string", "enum": ["polygon", "arbitrum", "mumbai"]},
+    "traderChainSpec": {"$ref": "#/definitions/ChainSpec"},
+    "listenerChainSpec": {"$ref": "#/definitions/ChainSpec"},
     "mockParams": {"$ref": "#/definitions/MockParams"},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
@@ -39,6 +39,10 @@
         "bogusTrader": {"type": "string"}
       },
       "required": ["bogusTrader"]
+    },
+    "ChainSpec": {
+      "type": "string",
+      "enum": ["polygon", "arbitrum", "mumbai"]
     }
   }
 }
