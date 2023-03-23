@@ -1,47 +1,4 @@
-import { boolean } from "cmd-ts";
-
-export interface Price {
-  price: number;
-  ts: Date;
-}
-
-export interface Trade {
-  asset: Asset;
-  dir: Dir;
-  openPrice: number;
-  amount: number;
-  leverage: number;
-  owner: Address;
-  clientTradeId?: TradeId;
-  tradeId?: number; // populated once back from exchange
-  status?: Status;
-  closePrice?: number;
-}
-
-export interface Trade2 {
-  trader: string;
-  pairIndex: number;
-  index: number;
-  initialPosToken: number;
-  positionSizeDai: number;
-  openPrice: number;
-  buy: boolean;
-  leverage: number;
-  tp?: number;
-  sl?: number;
-}
-
-export type EventType = "tradePlaced" | "tradeCancelled" | "tradeFilled" | "tradeClosed";
-
 export type Dir = "buy" | "sell";
-
-export type Status = "placed" | "cancelled" | "filled" | "closed";
-
-export type Address = string;
-
-export type Asset = string;
-
-export type TradeId = number;
 
 ///// gains events
 export interface MarketOrderInitiated {
@@ -66,4 +23,15 @@ export interface PriceReceived {
   price: number; // Note: this seems to be the actual price
   referencePrice: number;
   linkFee: number;
+}
+
+export interface LedgerTrade {
+  pair: string;
+  dir: Dir;
+  size: number;
+  leverage: number;
+  openPrice: number;
+  openTs: Date;
+  closePrice?: number;
+  closeTs?: Date;
 }

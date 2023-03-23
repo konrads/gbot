@@ -2,25 +2,14 @@
 
 import { Config } from "./configuration";
 import { log } from "./log";
-import { Dir, MarketOrderInitiated } from "./types";
+import { LedgerTrade, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
-import { GTrade, Trade3 } from "./gtrade";
+import { GTrade, Trade } from "./gtrade";
 import { shortPubkey, sleep } from "./utils";
-
-export interface Trade4 {
-  pair: string;
-  dir: Dir;
-  size: number;
-  leverage: number;
-  openPrice: number;
-  openTs: Date;
-  closePrice?: number;
-  closeTs?: Date;
-}
 
 interface State {
   status: "idle" | "open";
-  trade?: Trade4;
+  trade?: LedgerTrade;
 }
 
 const MAX_SLEEPS = 60;
@@ -31,7 +20,7 @@ export class Orchestrator {
   private readonly gtrade: GTrade;
   private readonly config: Config;
   private readonly mutex: Mutex = new Mutex();
-  private readonly closedTrades: Trade4[] = [];
+  private readonly closedTrades: LedgerTrade[] = [];
   private readonly prices: Map<string, { price: number; ts: Date }> = new Map();
 
   constructor(gtrade: GTrade, config: Config) {
@@ -55,7 +44,9 @@ export class Orchestrator {
             // FIXME: source from config!!!
             const size = 100;
             const leverage = 20;
-
+            //
+            // FIXME!!!;
+            //
             log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
             const monitoredTrades = await this.waitOpenTrades(event.pair, event.trader, true);
             if (monitoredTrades.length == 0) {
@@ -112,7 +103,7 @@ export class Orchestrator {
     });
   }
 
-  get myClosedTrades(): Trade4[] {
+  get myClosedTrades(): LedgerTrade[] {
     return this.closedTrades;
   }
 
@@ -120,7 +111,7 @@ export class Orchestrator {
     return this.prices;
   }
 
-  private async waitOpenTrades(pair: string, trader: string, expectSome: boolean): Promise<Trade3[]> {
+  private async waitOpenTrades(pair: string, trader: string, expectSome: boolean): Promise<Trade[]> {
     let trades = [];
     for (var i = 0; i < MAX_SLEEPS; i++) {
       trades = await this.gtrade.getOpenTrades(pair, trader);

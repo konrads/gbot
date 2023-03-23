@@ -6,7 +6,7 @@ import { startExpress } from "./webserver";
 import { log } from "./log";
 import { Orchestrator } from "./orchestrator";
 import { Notifier } from "./notifications";
-import { ChainSpec, getChainSpec, GTrade, GTRADE_PAIRS } from "./gtrade";
+import { ChainSpec, getChainSpec, GTrade } from "./gtrade";
 
 async function main() {
   const config = loadConfig();
@@ -25,7 +25,7 @@ async function main() {
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
   glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
-    event.pair = GTRADE_PAIRS[event.pairIndex];
+    event.pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex)?.pair;
     orchestrator.handleMonitoredEvent(event);
   });
 

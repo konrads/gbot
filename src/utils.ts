@@ -44,23 +44,6 @@ export function toFixed(x: number, fractionDigits: number): number {
   }
 }
 
-export function capFirst(str: string): string {
-  if (str && str.length > 0) return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-// generates ids based on current timestamp.
-// NOTE: assumes only 1 creator to exist at the time, and the rate of id generation to be > 1/ms (in case creator is re-initialized)
-// based on Atomics: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics/add
-export function idCreator(start?: number): () => number {
-  const buffer = new SharedArrayBuffer(BigInt64Array.BYTES_PER_ELEMENT);
-  const uint32 = new BigInt64Array(buffer);
-  uint32[0] = BigInt(start ?? Date.now());
-  function createId(): number {
-    return Number(Atomics.add(uint32, 0, 1n));
-  }
-  return createId;
-}
-
 export function bumpRestartCount(): number {
   const restartsCntFilename = "restart-cnt.txt";
   let restartCnt = 0;
