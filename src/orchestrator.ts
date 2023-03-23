@@ -1,105 +1,141 @@
 // Orchestrates bot strategy
 
 import { Config } from "./configuration";
-import { State } from "./state";
-import { Notifier } from "./notifications";
-import { ITrader } from "./trader";
 import { log } from "./log";
-import { Address, Trade } from "./types";
+import { Dir, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
+import { GTrade, Trade3 } from "./gtrade";
+import { shortPubkey, sleep } from "./utils";
+
+export interface Trade4 {
+  pair: string;
+  dir: Dir;
+  size: number;
+  leverage: number;
+  openPrice: number;
+  openTs: Date;
+  closePrice?: number;
+  closeTs?: Date;
+}
+
+interface State {
+  status: "idle" | "open";
+  trade?: Trade4;
+}
+
+const MAX_SLEEPS = 60;
+const SLEEP_MS = 1000;
 
 export class Orchestrator {
-  private config: Config;
-  private state: State;
-  private trader: ITrader;
-  private notifier: Notifier;
-  private lock: Mutex;
+  private readonly states: Map<string, State> = new Map();
+  private readonly gtrade: GTrade;
+  private readonly config: Config;
+  private readonly mutex: Mutex = new Mutex();
+  private readonly closedTrades: Trade4[] = [];
+  private readonly prices: Map<string, { price: number; ts: Date }> = new Map();
 
-  constructor(config: Config, state: State, trader: ITrader, notifier: Notifier, idCreate?: () => number) {
+  constructor(gtrade: GTrade, config: Config) {
+    this.gtrade = gtrade;
     this.config = config;
-    this.notifier = notifier;
-    this.state = state;
-    this.trader = trader;
-    this.lock = new Mutex();
   }
 
-  async initialize() {
-    // Setup feeds
-    this.trader.subscribeEvents(async (address: Address, event: Trade) => {
-      await this.handleEvent(address, event);
-    });
-  }
+  async handleMonitoredEvent(event: MarketOrderInitiated) {
+    return await this.mutex.runExclusive(async () => {
+      let state = this.states.get(event.pair);
+      if (!state) {
+        state = {
+          status: "idle",
+        };
+        this.states.set(event.pair, state);
+      }
 
-  async handleEvent(ownerPubkey: string, event: Trade) {
-    log.info(`Incoming event owned by ${ownerPubkey}: ${JSON.stringify(event)}`);
+      switch (state.status) {
+        case "idle":
+          if (event.open) {
+            // FIXME: source from config!!!
+            const size = 100;
+            const leverage = 20;
 
-    let effectRunner: () => Promise<void> = async () => {};
-
-    await this.lock.runExclusive(async () => {
-      const myPublicKey = this.config.wallet.address;
-      const openTrade = this.state.openTrades.get(event.asset);
-      const amount = this.config.assetMappings.find(({ asset }) => asset == event.asset)?.cashAmount;
-      const leverage = this.config.assetMappings.find(({ asset }) => asset == event.asset)?.leverage;
-
-      // set the price
-      if (event.status == "filled") this.state.setPrice(event.asset, event.openPrice);
-      else if (event.status == "closed") this.state.setPrice(event.asset, event.closePrice);
-
-      if (ownerPubkey == myPublicKey && openTrade && openTrade.clientTradeId == event.clientTradeId) {
-        const o = { ...openTrade };
-
-        if (!openTrade.status && event.status == "placed") {
-          // record new trade
-          o.status = "placed";
-          this.state.setMyTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade placed: ${JSON.stringify(o)}`);
-        } else if ([undefined, "placed"].includes(openTrade.status) && event.status == "filled") {
-          // fill
-          o.openPrice = event.openPrice;
-          o.status = "filled";
-          this.state.setMyTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade filled: ${JSON.stringify(o)}`);
-        } else if ([undefined, "placed"].includes(openTrade.status) && event.status == "cancelled") {
-          // cancel
-          o.status = "cancelled";
-          this.state.setMyTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade cancelled: ${JSON.stringify(o)}`);
-        } else if (openTrade.status == "filled" && event.status == "closed") {
-          // close
-          o.closePrice = event.closePrice;
-          o.status = "closed";
-          this.state.setMyTrade(o);
-          effectRunner = async () => await this.notifier.publish(`My trade closed: ${JSON.stringify(o)}`);
-        } else {
-          log.warn(`Unexpected event ${JSON.stringify(event)} for current trade ${openTrade}`);
-        }
-      } else if (ownerPubkey == this.config.monitoredTrader) {
-        if (!openTrade && event.status == "filled") {
-          // issue a new trade
-          const tradeCopy = {
-            asset: event.asset,
-            dir: event.dir,
-            amount,
-            leverage,
-            openPrice: event.openPrice,
-            owner: myPublicKey,
-          };
-          this.state.setMyTrade(tradeCopy);
-          this.state.setMonitoredTrade(event);
-          effectRunner = async () => await this.trader.createTrade({ ...tradeCopy });
-        } else if (openTrade?.status == "filled" && event.status == "closed") {
-          // issue trade close
-          this.state.setMonitoredTrade(event);
-          effectRunner = async () => await this.trader.closeTrade(openTrade.clientTradeId);
-        } else {
-          log.info(`Ignoring event from monitored trader: ${JSON.stringify(event)}, openTrade: ${JSON.stringify(openTrade)}`);
-        }
-      } else {
-        log.info(`Ignoring event from unknown trader ${ownerPubkey}: ${JSON.stringify(event)}, openTrade: ${JSON.stringify(openTrade)}`);
+            log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
+            const monitoredTrades = await this.waitOpenTrades(event.pair, event.trader, true);
+            if (monitoredTrades.length == 0) {
+              log.warn(`${state.status}-${event.pair}: Not seeing any open trades for trader ${shortPubkey(event.trader)}, staying idle`);
+            } else {
+              const firstTrade = monitoredTrades.find((x) => x.index == 0);
+              log.info(`${state.status}-${event.pair}: Following monitored trade ${JSON.stringify(firstTrade)}`);
+              const dir = firstTrade.buy ? "buy" : "sell";
+              const [openPrice] = await this.gtrade.issueMarketTrade(firstTrade.pair, size, leverage, dir);
+              const now = new Date();
+              this.prices.set(event.pair, { price: openPrice, ts: now });
+              log.info(`${state.status}-${event.pair}: Issued opened trade @ ${openPrice}`);
+              const myTrades = await this.waitOpenTrades(event.pair, this.config.wallet.address, true);
+              log.info(`${state.status}-${event.pair}: Found ${myTrades.length} confirmed trades`);
+              if (myTrades.length == 0) log.warn(`${state.status}-${event.pair}: Failed to obtain a monitored trade, presuming trade was rejected`);
+              else {
+                const latestMyTrade = myTrades[myTrades.length - 1];
+                state.trade = {
+                  dir: latestMyTrade.buy ? "buy" : "sell",
+                  pair: event.pair,
+                  size: size,
+                  leverage: leverage,
+                  openPrice: openPrice,
+                  openTs: now,
+                };
+                log.info(`${state.status}-${event.pair}: Opened ${dir} of ${size} @ $${openPrice}`);
+                state.status = "open";
+              }
+            }
+          } else log.info(`${state.status}-${event.pair}: Ignoring event close from ${shortPubkey(event.trader)}`);
+          break;
+        case "open":
+          if (!event.open) {
+            log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
+            // NOTE: not validating a monitored trade was actually closed
+            const [closePrice] = await this.gtrade.closeTrade(event.pair);
+            this.prices.set(event.pair, { price: closePrice, ts: new Date() });
+            const myTrades = await this.waitOpenTrades(event.pair, this.config.wallet.address, false);
+            if (myTrades.length == 0) {
+              const now = new Date();
+              state.trade.closePrice = closePrice;
+              state.trade.closeTs = now;
+              this.closedTrades.push(state.trade);
+              this.states.set(event.pair, { status: "idle" });
+              log.info(
+                `${state.status}-${event.pair}: Closed ${state.trade.dir} of ${state.trade.size} @ $${state.trade.openPrice} - $${state.trade.closePrice}`
+              );
+            } else throw new Error(`${state.status}-${event.pair}: Failed to close!`);
+          } else log.info(`${state.status}-${event.pair}: Ignoring event ${JSON.stringify(event)}`);
+          break;
+        default:
+          throw new Error(`Unknown state ${state.status}`);
       }
     });
+  }
 
-    // run effects outside of mutex lock
-    await effectRunner();
+  get myClosedTrades(): Trade4[] {
+    return this.closedTrades;
+  }
+
+  get assetPrices(): Map<string, { price: number; ts: Date }> {
+    return this.prices;
+  }
+
+  private async waitOpenTrades(pair: string, trader: string, expectSome: boolean): Promise<Trade3[]> {
+    let trades = [];
+    for (var i = 0; i < MAX_SLEEPS; i++) {
+      trades = await this.gtrade.getOpenTrades(pair, trader);
+      log.info(`...${pair}::${shortPubkey(trader)}: got ${trades.length}, expectSome: ${expectSome}`);
+      switch (trades.length) {
+        case 0:
+          if (expectSome) await sleep(SLEEP_MS);
+          else return trades;
+          break;
+        default:
+          if (expectSome) return trades;
+          else await sleep(SLEEP_MS);
+          break;
+      }
+    }
+    return trades;
   }
 }

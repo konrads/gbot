@@ -9,7 +9,7 @@
       "resolveJsonModule": true,
       "skipLibCheck": true
     },
-    "include": ["./src/**/*"],
+    "include": ["./src/**/*", "tmp/orchestrator.ts", "tmp/app.ts", "tmp/mocks.ts", "tmp/trader.ts", "tmp/state.ts"],
     "exclude": ["**/node_modules/**/*"],
     "typedocOptions": {
       "entryPoints": ["src/index.ts"],

@@ -18,7 +18,7 @@ export interface Trade {
   closePrice?: number;
 }
 
-export interface GTrade {
+export interface Trade2 {
   trader: string;
   pairIndex: number;
   index: number;
@@ -43,10 +43,12 @@ export type Asset = string;
 
 export type TradeId = number;
 
+///// gains events
 export interface MarketOrderInitiated {
   orderId: number;
   trader: string;
-  pairIndex: number;
+  pairIndex?: number;
+  pair?: string;
   open: boolean;
 }
 

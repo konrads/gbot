@@ -39,6 +39,19 @@ export const MUMBAI_SPEC: ChainSpec = {
   ],
 };
 
+export interface Trade3 {
+  trader: string;
+  pair: string;
+  index: number;
+  initialPosToken: number;
+  positionSizeDai: number;
+  openPrice: number;
+  buy: boolean;
+  leverage: number;
+  tp: number;
+  sl: number;
+}
+
 export function getChainSpec(id: "polygon" | "arbitrum" | "mumbai"): ChainSpec {
   const spec = [POLYGON_SPEC, ARBITRUM_SPEC, MUMBAI_SPEC].find((x) => x.id == id);
   if (!spec) throw new Error(`Invalid chain spec ${id}`);
@@ -49,7 +62,7 @@ export enum GtradeOrderType {
   Market = 0,
 }
 
-const GTRADE_PAIRS = [
+export const GTRADE_PAIRS = [
   "btc",
   "eth",
   "link",
@@ -154,14 +167,16 @@ export class GTrade {
     return res;
   }
 
-  async getOpenTradeCount(pair: string): Promise<number> {
+  async getOpenTradeCount(pair: string, trader?: string): Promise<number> {
+    trader = trader ?? this.signer.address;
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
-    const res = Number(await this.storageContract.openTradesCount(this.signer.address, pairIndex));
+    const res = Number(await this.storageContract.openTradesCount(trader, pairIndex));
     return res;
   }
 
-  async getOpenTradeCounts(): Promise<Map<string, number>> {
+  async getOpenTradeCounts(trader?: string): Promise<Map<string, number>> {
+    trader = trader ?? this.signer.address;
     const cnts = await Promise.all(
       range(GTRADE_PAIRS.length).map(async (i): Promise<[string, number]> => {
         const cnt = Number(await this.storageContract.openTradesCount(this.signer.address, i));
@@ -171,15 +186,16 @@ export class GTrade {
     return new Map(cnts);
   }
 
-  async getOpenTrades(pair: string, cnt?: number): Promise<any[]> {
-    cnt = cnt ?? (await this.getOpenTradeCount(pair));
+  async getOpenTrades(pair: string, trader?: string, cnt?: number): Promise<Trade3[]> {
+    trader = trader ?? this.signer.address;
+    cnt = cnt ?? (await this.getOpenTradeCount(pair, trader));
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
-    const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.openTrades(this.signer.address, pairIndex, i)));
+    const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.openTrades(trader, pairIndex, i)));
     const asTrades = res.map((x) => {
       return {
-        owner: x.trader,
-        asset: GTRADE_PAIRS[Number(x.pairIndex)],
+        trader: x.trader,
+        pair: GTRADE_PAIRS[Number(x.pairIndex)],
         index: Number(x.index),
         initialPosToken: Number(x.initialPosToken) / 10 ** 18,
         positionSizeDai: Number(x.positionSizeDai) / 10 ** 18,
@@ -194,11 +210,12 @@ export class GTrade {
   }
 
   // Not sure the purpose...
-  async getOpenTradesInfo(pair: string, cnt?: number): Promise<any[]> {
-    cnt = cnt ?? (await this.getOpenTradeCount(pair));
+  async getOpenTradesInfo(pair: string, trader?: string, cnt?: number): Promise<any[]> {
+    trader = trader ?? this.signer.address;
+    cnt = cnt ?? (await this.getOpenTradeCount(pair, trader));
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
-    const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.openTradesInfo(this.signer.address, pairIndex, i)));
+    const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.openTradesInfo(trader, pairIndex, i)));
     const asInfos = res.map((x) => {
       return {
         tokenId: Number(x.tokenId),
@@ -231,7 +248,7 @@ export class GTrade {
     stopLoss?: number,
     tradeIndex: number = 0,
     slippage: number = 0.01
-  ): Promise<ethers.providers.TransactionReceipt> {
+  ): Promise<[number, ethers.providers.TransactionReceipt]> {
     const oraclePrice = await this.getOraclePrice(pair);
     let price: number;
     switch (dir) {
@@ -244,7 +261,7 @@ export class GTrade {
       default:
         throw new Error(`Invalid dir ${dir}`);
     }
-    return await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage);
+    return [oraclePrice, await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage)];
   }
 
   async issueTrade(
@@ -261,12 +278,12 @@ export class GTrade {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     let initialPosToken = 0;
-    let positionSizeDai = BigInt(size * 10 ** 18);
+    let positionSizeDai = BigInt(Math.round(size * 10 ** 18));
     let openPrice = BigInt(Math.round(price * 10 ** 10));
     let buy = dir == "buy";
-    takeProfit = (takeProfit ?? (dir == "buy" ? price * 5 : 0)) * 10 ** 10;
-    stopLoss = (stopLoss ?? (dir == "buy" ? 0 : price * 5)) * 10 ** 10;
-    slippage = slippage * 10 ** 12;
+    takeProfit = Math.round((takeProfit ?? (dir == "buy" ? price * 5 : 0)) * 10 ** 10);
+    stopLoss = Math.round((stopLoss ?? (dir == "buy" ? 0 : price * 5)) * 10 ** 10);
+    slippage = Math.round(slippage * 10 ** 12);
 
     let orderType = 0;
     let spreadReductionId = 0;
@@ -290,20 +307,21 @@ export class GTrade {
     return receipt;
   }
 
-  async closeTrade(pair: string, tradeIndex: number): Promise<ethers.providers.TransactionReceipt> {
+  async closeTrade(pair: string, tradeIndex: number = 0): Promise<[number, ethers.providers.TransactionReceipt]> {
     const pairIndex = GTRADE_PAIRS.indexOf(pair);
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     const res = await (await this.getTradingContract()).closeTradeMarket(pairIndex, tradeIndex);
     const receipt = await res.wait();
-    return receipt;
+    const oraclePrice = await this.getOraclePrice(pair);
+    return [oraclePrice, receipt];
   }
 
-  async subscribeTradingEvents(traderAddresses: string[], callback: (event: MarketOrderInitiated | CouldNotCloseTrade) => Promise<void>) {
+  async subscribeMarketOrderInitiated(traderAddresses: string[], callback: (event: MarketOrderInitiated) => Promise<void>) {
     const tradingContract = await this.getTradingContract();
-    const filter1 = {
+    const filter = {
       topics: [ethers.utils.id("MarketOrderInitiated(uint256,address,uint256,bool)"), null, traderAddresses.map((addr) => hexZeroPad(addr, 32))],
     };
-    tradingContract.on(filter1, async (orderId: BigInt, trader: string, pairIndex: BigInt, open: boolean) => {
+    tradingContract.on(filter, async (orderId: BigInt, trader: string, pairIndex: BigInt, open: boolean) => {
       const event: MarketOrderInitiated = {
         orderId: Number(orderId),
         trader,
@@ -312,10 +330,14 @@ export class GTrade {
       };
       await callback(event);
     });
-    const filter2 = {
+  }
+
+  async subscribeCouldNotCloseTrade(traderAddresses: string[], callback: (event: CouldNotCloseTrade) => Promise<void>) {
+    const tradingContract = await this.getTradingContract();
+    const filter = {
       topics: [ethers.utils.id("CouldNotCloseTrade(address,uint256,uint256)"), traderAddresses.map((addr) => hexZeroPad(addr, 32))],
     };
-    tradingContract.on(filter2, async (trader: string, pairIndex: BigInt, index: BigInt) => {
+    tradingContract.on(filter, async (trader: string, pairIndex: BigInt, index: BigInt) => {
       const event: CouldNotCloseTrade = {
         trader,
         pairIndex: Number(pairIndex),

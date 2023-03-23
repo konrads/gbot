@@ -2,6 +2,8 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "properties": {
+    "traderChainSpec": {"type": "string", "enum": ["polygon", "arbitrum", "mumbai"]},
+    "listenerChainSpec": {"type": "string", "enum": ["polygon", "arbitrum", "mumbai"]},
     "network": {"type": "string", "enum": ["testnet", "mainnet"]},
     "endpoint": {"type": "string"},
     "mockParams": {"$ref": "#/definitions/MockParams"},
@@ -13,7 +15,7 @@
     },
     "monitoredTrader": {"type": "string"}
   },
-  "required": ["network", "endpoint", "assetMappings", "monitoredTrader"],
+  "required": ["traderChainSpec", "network", "endpoint", "assetMappings", "monitoredTrader"],
   "definitions": {
     "NotificationDetails": {
       "type": "object",

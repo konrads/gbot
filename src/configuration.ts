@@ -14,6 +14,8 @@ export interface AssetMapping {
 }
 
 export interface Config {
+  traderChainSpec: "polygon" | "arbitrum" | "mumbai";
+  listenerChainSpec: "polygon" | "arbitrum" | "mumbai";
   network: "devnet" | "mainnet";
   mockParams?: MockParams;
   endpoint: string;

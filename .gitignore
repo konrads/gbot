@@ -3,5 +3,6 @@ node_modules
 config.json
 wallet*.txt
 restart-cnt.txt
+tmp
 *.bk
 *.log

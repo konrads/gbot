@@ -33,6 +33,11 @@ const DIR = cmdts.option({
   long: "dir",
   defaultValue: () => "buy",
 });
+const TRADER = cmdts.option({
+  type: cmdts.string,
+  long: "trader",
+  defaultValue: () => undefined,
+});
 
 async function main() {
   const publishNotification = cmdts.command({
@@ -100,11 +105,12 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     args: {
       pair: PAIR,
       chain: CHAIN,
+      trader: TRADER,
     },
-    handler: async ({ pair, chain }) => {
+    handler: async ({ pair, chain, trader }) => {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
-      const trades = await gtrade.getOpenTrades(pair);
+      const trades = await gtrade.getOpenTrades(pair, trader);
       log.info(`open trades:\n${trades.map((x) => JSON.stringify(x)).join("\n")}`);
     },
   });
@@ -114,11 +120,12 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     args: {
       pair: PAIR,
       chain: CHAIN,
+      trader: TRADER,
     },
-    handler: async ({ pair, chain }) => {
+    handler: async ({ pair, chain, trader }) => {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
-      const trades = await gtrade.getOpenTradesInfo(pair);
+      const trades = await gtrade.getOpenTradesInfo(pair, trader);
       log.info(`open trades:\n${trades.map((x) => JSON.stringify(x)).join("\n")}`);
     },
   });
@@ -225,8 +232,8 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const config = loadConfig();
       console.log(`Issuing trade as ${config.wallet.address}`);
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
-      const receipt = await gtrade.issueMarketTrade(pair, size, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
-      log.info(`issueMarketTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
+      const [openPrice, receipt] = await gtrade.issueMarketTrade(pair, size, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
+      log.info(`issueMarketTrade status ${receipt.status}, hash ${receipt.transactionHash}, openPrice ${openPrice}`);
     },
   });
 
@@ -244,8 +251,8 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     handler: async ({ orderIndex, pair, chain }) => {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
-      const receipt = await gtrade.closeTrade(pair, orderIndex);
-      log.info(`closeTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
+      const [closePrice, receipt] = await gtrade.closeTrade(pair, orderIndex);
+      log.info(`closeTrade status ${receipt.status}, hash ${receipt.transactionHash}, closePrice ${closePrice}`);
     },
   });
 
@@ -265,7 +272,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const addressez = addresses ? addresses.split(",").map((x) => x.trim()) : [config.wallet.address, config.monitoredTrader];
       log.info(`Monitoring trade events on pubkeys: ${addressez}`);
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec(chain as any));
-      await gtrade.subscribeTradingEvents(addressez, async (event) => console.log(`${new Date()}::event received ${JSON.stringify(event)}`));
+      await gtrade.subscribeMarketOrderInitiated(addressez, async (event) => console.log(`${new Date()}::event received ${JSON.stringify(event)}`));
       await sleep(sleepMs);
     },
   });

@@ -93,3 +93,12 @@ export async function getGasPrice(): Promise<EstimatedGasPrice> {
 export function range(n: number): number[] {
   return [...Array(n).keys()];
 }
+
+export function shortPubkey(pubkey: string): string {
+  const i0 = 0;
+  const i1 = 5;
+  const i2 = pubkey.length - 4;
+  const i3 = pubkey.length;
+  if (i2 > i1) return `${pubkey.slice(i0, i1)}...${pubkey.slice(i2, i3)}`;
+  else return pubkey;
+}

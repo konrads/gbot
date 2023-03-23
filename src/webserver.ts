@@ -2,10 +2,10 @@ import express from "express";
 import hbs from "hbs";
 import { Config } from "./configuration";
 import { log } from "./log";
-import { State } from "./state";
 import { toFixed } from "./utils";
+import { Orchestrator } from "./orchestrator";
 
-export function startExpress(config: Config, state: State) {
+export function startExpress(config: Config, orchestrator: Orchestrator) {
   hbs.handlebars.registerHelper("cash", function (amount: number) {
     return amount ? `$${toFixed(amount, 2)}` : "";
   });
@@ -18,32 +18,32 @@ export function startExpress(config: Config, state: State) {
   expressApp.set("view engine", "hbs");
 
   expressApp.get("/dashboard", (req, res) => {
+    const myClosedTrades = orchestrator.myClosedTrades;
+    const pnl = myClosedTrades
+      .map((x) => ((x.size * x.leverage * (x.closePrice - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1))
+      .reduce((x, y) => x + y, 0);
+
     const ctx = {
       now: new Date().toLocaleString(),
       refresh: req.query.refresh ?? 10,
-      network: config.network,
-      myPnl: state.myPnl,
-      monitoredPnl: state.monitoredPnl,
+      traderChainSpec: config.traderChainSpec,
+      listenerChainSpec: config.listenerChainSpec,
+      myPubkey: config.wallet.address,
+      monitoredPubkey: config.monitoredTrader,
+      pnl,
 
-      assets: state.assets.map((asset) => {
-        const price = state.getPrice(asset);
+      assets: [...orchestrator.assetPrices.entries()].map(([asset, { price, ts }]) => {
         return {
           asset,
-          price: toFixed(price?.price, 2),
-          priceTs: price?.ts.toLocaleString(),
-          amount: state.openTrades.get(asset)?.amount,
+          price: toFixed(price, 2),
+          ts: ts.toLocaleString(),
         };
       }),
-      myTrades: state.myTrades.map(([ts, trade]) => {
+      trades: myClosedTrades.map((x) => {
         return {
-          ts: new Date(ts).toLocaleString(),
-          trade: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${toFixed(trade.openPrice, 2)}->${toFixed(trade.closePrice, 2)}: status: ${trade.status}, ids: ${trade.tradeId}/${trade.clientTradeId}`,
-        };
-      }),
-      monitoredTrades: state.monitoredTrades.map(([ts, trade]) => {
-        return {
-          ts: new Date(ts).toLocaleString(),
-          trade: `${trade.asset}: ${trade.dir} ${trade.amount} @ ${toFixed(trade.openPrice, 2)}->${toFixed(trade.closePrice, 2)}: status: ${trade.status}, ids: ${trade.tradeId}/${trade.clientTradeId}`,
+          ts: x.openTs.toLocaleString(),
+          trade: `${x.pair}: ${x.dir} ${x.size} @ ${toFixed(x.openPrice, 2)}->${toFixed(x.closePrice, 2)}`,
+          pnl: ((x.size * x.leverage * (x.closePrice - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1),
         };
       }),
     };
