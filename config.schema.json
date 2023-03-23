@@ -4,8 +4,6 @@
   "properties": {
     "traderChainSpec": {"type": "string", "enum": ["polygon", "arbitrum", "mumbai"]},
     "listenerChainSpec": {"type": "string", "enum": ["polygon", "arbitrum", "mumbai"]},
-    "network": {"type": "string", "enum": ["testnet", "mainnet"]},
-    "endpoint": {"type": "string"},
     "mockParams": {"$ref": "#/definitions/MockParams"},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
@@ -15,7 +13,7 @@
     },
     "monitoredTrader": {"type": "string"}
   },
-  "required": ["traderChainSpec", "network", "endpoint", "assetMappings", "monitoredTrader"],
+  "required": ["traderChainSpec", "assetMappings", "monitoredTrader"],
   "definitions": {
     "NotificationDetails": {
       "type": "object",

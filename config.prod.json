@@ -1,6 +1,6 @@
 {
-  "network": "mainnet",
-  "endpoint": "https://mainnet.infura.io/v3",
+  "traderChainSpec": "arbitrum",
+  "listenerChainSpec": "arbitrum",
   "webServerPort": 85,
   "notifications": {
     "telegramToken": "xxx",

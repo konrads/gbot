@@ -1,14 +1,11 @@
 {
-  "network": "testnet",
-  "endpoint": "https://testnet.infura.io/v3",
-  "useMocks": true,
+  "traderChainSpec": "mumbai",
+  "listenerChainSpec": "mumbai",
   "webServerPort": 85,
   "notifications": {
     "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
     "telegramChatId": "-873100380"
   },
-  "traderChainSpec": "mumbai",
-  "listenerChainSpec": "mumbai",
   "assetMappings": [
     { "asset": "btc", "cashAmount": 100, "leverage": 15 },
     { "asset": "eth", "cashAmount": 100, "leverage": 15 },
