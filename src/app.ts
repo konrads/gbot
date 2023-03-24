@@ -21,6 +21,7 @@ async function main() {
   const gtrader = new GTrade(config.wallet.privateKey, traderChainSpec);
 
   if (config.closeTradesAtStart) {
+    log.info(`Bootstrap: closeTradesAtStart requested...`);
     const tradesClosed = await gtrader.closeAllTrades();
     if (tradesClosed.size > 0) log.info(`Bootstrap: closed trades ${[...tradesClosed.entries()].map(([pair, cnt]) => `${pair}:${cnt}`).join(", ")}`);
     else log.info(`Bootstrap: no trades to close`);
