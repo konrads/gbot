@@ -30,8 +30,6 @@ Manually test commands
 
 ```sh
 # infrastructure
-src/cli.ts watchPrices                         # monitor prices via ccxt
-src/cli.ts watchGasPrices                      # monitor gas prices
 src/cli.ts showKeys                            # display used private and public keys
 src/cli.ts publishNotification "test message"
 
