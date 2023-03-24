@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { hexZeroPad } from "ethers/lib/utils";
 import { CouldNotCloseTrade, Dir, MarketOrderInitiated, PriceReceived } from "../types";
-import { range } from "../utils";
+import { range, sleep } from "../utils";
 import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI, AGGREGATOR_PROXY_ABI } from "./abi";
 
 export interface ChainSpec {
@@ -264,6 +264,19 @@ export class GTrade {
     const res = await tradingContract.openTrade(order, orderType, spreadReductionId, slippage, this.referrer);
     const receipt = await res.wait();
     return receipt;
+  }
+
+  // Sequential close of all trades, tried in parallel and was getting TRANSACTION_REPLACED errors
+  async closeAllTrades(): Promise<Map<string, number>> {
+    const counts = await this.getOpenTradeCounts();
+    const nonZeroCounts = [...counts.entries()].filter(([_, v]) => v != 0);
+    for (var [pair, count] of nonZeroCounts) {
+      for (var i = count - 1; i >= 0; i--) {
+        await this.closeTrade(pair, i);
+        await sleep(1000);
+      }
+    }
+    return new Map(nonZeroCounts);
   }
 
   async closeTrade(pair: string, tradeIndex: number = 0): Promise<[number, ethers.providers.TransactionReceipt]> {

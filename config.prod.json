@@ -1,4 +1,5 @@
 {
+  "closeTradesAtStart": true,
   "traderChainSpec": "arbitrum",
   "listenerChainSpec": "arbitrum",
   "webServerPort": 85,

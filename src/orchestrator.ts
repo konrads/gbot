@@ -6,6 +6,7 @@ import { LedgerTrade, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
 import { GTrade, Trade } from "./gtrade";
 import { shortPubkey, sleep } from "./utils";
+import { Notifier } from "./notifications";
 
 interface AssetState {
   status: "idle" | "open";
@@ -17,15 +18,17 @@ const WAIT_SLEEP_MS = 1000;
 
 export class Orchestrator {
   private readonly assetStates: Map<string, AssetState> = new Map();
-  private readonly gtrade: GTrade;
   private readonly config: Config;
+  private readonly gtrade: GTrade;
+  private readonly notifier: Notifier;
   private readonly mutex: Mutex = new Mutex();
   private readonly closedTrades: LedgerTrade[] = [];
   private readonly prices: Map<string, { price: number; ts: Date }> = new Map();
 
-  constructor(gtrade: GTrade, config: Config) {
-    this.gtrade = gtrade;
+  constructor(config: Config, gtrade: GTrade, notifier: Notifier) {
     this.config = config;
+    this.gtrade = gtrade;
+    this.notifier = notifier;
   }
 
   async handleMonitoredEvent(event: MarketOrderInitiated) {
@@ -69,7 +72,7 @@ export class Orchestrator {
                     openPrice: openPrice,
                     openTs: now,
                   };
-                  log.info(`${state.status}-${event.pair}: Opened ${dir} of ${configAsset.cashAmount} @ $${openPrice}`);
+                  this.notifier?.publish(`${state.status}-${event.pair}: Opened ${dir} of ${configAsset.cashAmount} @ $${openPrice}`);
                   state.status = "open";
                 }
               }
@@ -88,7 +91,7 @@ export class Orchestrator {
                 state.trade.closeTs = now;
                 this.closedTrades.push(state.trade);
                 this.assetStates.set(event.pair, { status: "idle" });
-                log.info(
+                this.notifier?.publish(
                   `${state.status}-${event.pair}: Closed ${state.trade.dir} of ${state.trade.size} @ $${state.trade.openPrice} - $${state.trade.closePrice}`
                 );
               } else throw new Error(`${state.status}-${event.pair}: Failed to close!`);

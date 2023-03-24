@@ -11,6 +11,7 @@ export class Notifier {
   }
 
   async publish(msg: string) {
+    log.info(msg);
     if (this.notificationsDetails?.telegramToken && this.notificationsDetails?.telegramChatId) {
       const resp = await fetch(`https://api.telegram.org/bot${this.notificationsDetails.telegramToken}/sendMessage`, {
         method: `POST`,

@@ -19,8 +19,15 @@ async function main() {
 `);
   const traderChainSpec: ChainSpec = getChainSpec(config.traderChainSpec);
   const gtrader = new GTrade(config.wallet.privateKey, traderChainSpec);
-  // const notifier = new Notifier(config.notifications);
-  const orchestrator = new Orchestrator(gtrader, config);
+
+  if (config.closeTradesAtStart) {
+    const tradesClosed = await gtrader.closeAllTrades();
+    if (tradesClosed.size > 0) log.info(`Bootstrap: closed trades ${[...tradesClosed.entries()].map(([pair, cnt]) => `${pair}:${cnt}`).join(", ")}`);
+    else log.info(`Bootstrap: no trades to close`);
+  }
+
+  const notifier = new Notifier(config.notifications);
+  const orchestrator = new Orchestrator(config, gtrader, notifier);
 
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
@@ -31,8 +38,7 @@ async function main() {
 
   const die = async (reason: string) => {
     log.info(`Shutting down due to ${reason}`);
-    // notifier.publish(`Shutting down due to ${reason}`);
-    // await trader.shutdown();
+    await notifier.publish(`Shutting down due to ${reason}`);
     process.exit(1);
   };
 
@@ -46,7 +52,7 @@ async function main() {
     await die("SIGTERM");
   });
 
-  // notifier.publish(`Gbot restart: ${restartCnt}`);
+  notifier.publish(`Gbot restart: ${restartCnt}`);
 }
 
 main();

@@ -1,4 +1,5 @@
 {
+  "closeTradesAtStart": true,
   "traderChainSpec": "mumbai",
   "listenerChainSpec": "mumbai",
   "webServerPort": 85,
