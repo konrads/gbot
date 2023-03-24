@@ -43,4 +43,5 @@ src/cli.ts issueTrade --pair eth --price 1641 --size 100 --leverage 20 --stopLos
 src/cli.ts issueMarketTrade --pair eth --size 100 --leverage 20 --stopLoss 0 --takeProfit 1650 --slippage 0.01
 src/cli.ts getOpenTrades --pair eth
 src/cli.ts closeTrade --pair eth --orderIndex 0
+src/cli.ts closeAllTrades
 ```
