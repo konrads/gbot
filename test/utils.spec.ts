@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { unique, groupBy, toDDMMMYY, toFixed } from "../src/utils";
+import { unique, groupBy, toFixed } from "../src/utils";
 
 describe("utils", function () {
   it("unique", function () {
@@ -16,18 +16,6 @@ describe("utils", function () {
       ]),
       new Map(groupBy(m, (x) => x % 3))
     );
-  });
-
-  it("toDDMMMYY", function () {
-    const d = new Date();
-    d.setFullYear(2022);
-    d.setMonth(9);
-    d.setDate(5);
-    assert.strictEqual("05OCT22", toDDMMMYY(d));
-    d.setDate(12);
-    assert.strictEqual("12OCT22", toDDMMMYY(d));
-    d.setFullYear(1980);
-    assert.strictEqual("12OCT80", toDDMMMYY(d));
   });
 
   it("toFixed", function () {

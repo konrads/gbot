@@ -1,11 +1,11 @@
 {
   "closeTradesAtStart": true,
-  "traderChainSpec": "arbitrum",
+  "traderChainSpec": "mumbai",
   "listenerChainSpec": "arbitrum",
   "webServerPort": 80,
   "notifications": {
-    "telegramToken": "xxx",
-    "telegramChatId": "yyy"
+    "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
+    "telegramChatId": "-873100380"
   },
   "assetMappings": [
     { "asset": "BTC", "cashAmount": 100, "leverage": 15 },
@@ -13,5 +13,5 @@
     { "asset": "SOL", "cashAmount": 100, "leverage": 15 },
     { "asset": "APT", "cashAmount": 100, "leverage": 15 }
   ],
-  "monitoredTrader": "monitored-pubkey"
+  "monitoredTrader": "0x0A1822364DeA5F4eD18b6fC4C7bd38FCD8B83789"
 }

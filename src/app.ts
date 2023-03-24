@@ -6,7 +6,8 @@ import { startExpress } from "./webserver";
 import { log } from "./log";
 import { Orchestrator } from "./orchestrator";
 import { Notifier } from "./notifications";
-import { ChainSpec, getChainSpec, GTrade } from "./gtrade";
+import { ChainSpec, GTrade } from "./gtrade";
+import { getChainSpec } from "./gtrade/chainspec";
 
 async function main() {
   const config = loadConfig();
@@ -33,8 +34,11 @@ async function main() {
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
   glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
-    event.pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex)?.pair;
-    orchestrator.handleMonitoredEvent(event);
+    const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);
+    if (pair) {
+      event.pair = pair.pair;
+      orchestrator.handleMonitoredEvent(event);
+    } else log.debug(`Listener received unsupported event ${JSON.stringify(event)}`);
   });
 
   const die = async (reason: string) => {

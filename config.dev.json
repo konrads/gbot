@@ -8,12 +8,12 @@
     "telegramChatId": "-873100380"
   },
   "assetMappings": [
-    { "asset": "btc", "cashAmount": 100, "leverage": 15 },
-    { "asset": "eth", "cashAmount": 100, "leverage": 15 },
-    { "asset": "sol", "cashAmount": 100, "leverage": 15 }
+    { "asset": "btc", "cashAmount": 500, "leverage": 3 },
+    { "asset": "eth", "cashAmount": 500, "leverage": 3 },
+    { "asset": "link", "cashAmount": 500, "leverage": 3 },
+    { "asset": "matic", "cashAmount": 500, "leverage": 3 },
+    { "asset": "eurusd", "cashAmount": 500, "leverage": 3 }
   ],
   "monitoredTrader": "0x0A1822364DeA5F4eD18b6fC4C7bd38FCD8B83789",
-  "mockParams": {
-    "bogusTrader": "bogus-trader"
-  }
+  "mockParams": { "bogusTrader": "bogus-trader" }
 }
