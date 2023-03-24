@@ -50,7 +50,7 @@ src/cli.ts closeAllTrades
 
 Following is my setup, guided by desire not to be limited by network bandwidth (suits websockets). Note: following assumes:
 
-- 18.214.16.179 is your ubuntu ec2 instance
+- 18.214.16.179 is your ubuntu ec2 instance, with port 80 open
 - `gbot.pem` aws keypair has created
 - `aws-deployment` priv key has been setup in github
 - `<my-pub-key>` = your wallet priv key, with appropriate funds for given chain
@@ -89,4 +89,5 @@ node_modules/.bin/ts-node src/cli.ts gTradeStats
 # start the server
 nohup node_modules/.bin/ts-node src/app.ts &
 tail -f nohup.out
+# open http://18.214.16.179/dashboard for dashboard
 ```
