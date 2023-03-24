@@ -76,6 +76,7 @@ async function main() {
       log.info(`========== gTrade stats ==========
 pubkey:          ${config.wallet.address}
 monitoredPubkey: ${config.monitoredTrader}
+tradingContract: ${await gtrade.getTradingContractAddress()}
 allowance:       ${await gtrade.getAllowance()}
 balance:         ${await gtrade.getBalance()}
 daiBalance:      ${await gtrade.getDaiBalance()}

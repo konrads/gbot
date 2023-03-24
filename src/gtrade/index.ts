@@ -29,14 +29,6 @@ export enum GtradeOrderType {
   Market = 0,
 }
 
-// export const GTRADE_PAIRS = [
-//   "btc", "eth", "link", "doge", "matic", "ada", "sushi", "aave", "algo", "bat",
-//   "comp", "dot", "eos", "ltc", "mana", "omg", "snx", "uni", "xlm", "xrp",
-//   "zec", "audusd", "eurchf", "eurgbp", "eurjpy", "eurusd", "gbpusd", "nzdusd", "usdcad", "usdchf",
-//   "usdjpy", "luna", "yfi", "sol", "xtz", "bch", "bnt", "crv", "dash",
-//   "etc", "icp", "mkr", "neo", "theta", "trx", "zrx",
-// ];
-
 export class GTrade {
   private readonly referrer: string;
   private readonly chainSpec: ChainSpec;
@@ -54,6 +46,10 @@ export class GTrade {
     this.signer = new ethers.Wallet(privKey, this.provider);
     this.daiContract = new ethers.Contract(chainSpec.daiAddress, ERC20_ABI, this.signer);
     this.storageContract = new ethers.Contract(chainSpec.storageAddress, STORAGE_ABI, this.signer);
+  }
+
+  async getTradingContractAddress(): Promise<string> {
+    return await this.storageContract.trading();
   }
 
   private async getTradingContract(): Promise<ethers.Contract> {
