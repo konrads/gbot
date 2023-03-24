@@ -17,7 +17,10 @@ export const POLYGON_SPEC: ChainSpec = {
   daiAddress: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
   storageAddress: "0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD",
   rpcUrl: "wss://polygon.llamarpc.com",
-  pairs: [],
+  pairs: [
+    { index: 0, pair: "btc", aggregatorProxyAddress: "0xc907e116054ad103354f2d350fd2514433d57f6f" },
+    { index: 1, pair: "matic", aggregatorProxyAddress: "0xab594600376ec9fd91f8e885dadf0ce036862de0" },
+  ],
 };
 
 export const ARBITRUM_SPEC: ChainSpec = {
@@ -25,7 +28,10 @@ export const ARBITRUM_SPEC: ChainSpec = {
   daiAddress: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
   storageAddress: "0xcFa6ebD475d89dB04cAd5A756fff1cb2BC5bE33c",
   rpcUrl: "wss://arb-mainnet.g.alchemy.com/v2/BnencMGjoPsmbRIjrDZvh4zLTmlZyDtG",
-  pairs: [],
+  pairs: [
+    { index: 0, pair: "btc", aggregatorProxyAddress: "0x6ce185860a4963106506c203335a2910413708e9" },
+    { index: 1, pair: "arb", aggregatorProxyAddress: "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612" },
+  ],
 };
 
 export const MUMBAI_SPEC: ChainSpec = {
@@ -35,7 +41,7 @@ export const MUMBAI_SPEC: ChainSpec = {
   rpcUrl: "wss://polygon-mumbai.g.alchemy.com/v2/US6ybgcQC9-FpHhr0TOiBN35NKYH18r5",
   pairs: [
     { index: 0, pair: "btc", aggregatorProxyAddress: "0x11e187fd2c832a95bdd78a46dda774d5821e7569" },
-    { index: 1, pair: "eth", aggregatorProxyAddress: "0xb4ccb58dd3d35530e54b631ac0561f0c6d424d38" },
+    { index: 1, pair: "matic", aggregatorProxyAddress: "0xb4ccb58dd3d35530e54b631ac0561f0c6d424d38" },
   ],
 };
 

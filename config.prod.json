@@ -2,7 +2,7 @@
   "closeTradesAtStart": true,
   "traderChainSpec": "arbitrum",
   "listenerChainSpec": "arbitrum",
-  "webServerPort": 85,
+  "webServerPort": 80,
   "notifications": {
     "telegramToken": "xxx",
     "telegramChatId": "yyy"

@@ -31,7 +31,7 @@ export interface MockParams {
 
 export function loadConfig(): Config {
   const config: Config = require("../config.json");
-  const walletPrivKey = fs.readFileSync("./wallet.txt", "utf8");
+  const walletPrivKey = fs.readFileSync("./wallet.txt", "utf8").trim();
   config.wallet = new Wallet(walletPrivKey);
   validateSchema(config, require("../config.schema.json"));
   return config;
