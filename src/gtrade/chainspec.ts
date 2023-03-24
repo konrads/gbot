@@ -1,11 +1,13 @@
 import { ChainSpec } from ".";
 
+// Gains pairs with pairIndices: https://gains-network.gitbook.io/docs-home/gtrade-leveraged-trading/pair-list
+
 export const POLYGON_SPEC: ChainSpec = {
   id: "polygon",
   daiAddress: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
   storageAddress: "0xaee4d11a16B2bc65EDD6416Fb626EB404a6D65BD",
   rpcUrl: "wss://polygon.llamarpc.com",
-  // https://data.chain.link/polygon/mainnet/crypto-usd
+  // polygon chainlink contracts: https://data.chain.link/polygon/mainnet/crypto-usd
   pairs: [
     { index: 0, pair: "btc", aggregatorProxyAddress: "0xc907e116054ad103354f2d350fd2514433d57f6f" },
     { index: 1, pair: "eth", aggregatorProxyAddress: "0xab594600376ec9fd91f8e885dadf0ce036862de0" },
@@ -53,6 +55,26 @@ export const POLYGON_SPEC: ChainSpec = {
     { index: 43, pair: "theta", aggregatorProxyAddress: "0x38611b09f8f2d520c14ea973765c225bf57b9eac" },
     { index: 44, pair: "trx", aggregatorProxyAddress: "0x307ccf7cbd17b69a487b9c3dbe483931cf3e1833" },
     { index: 45, pair: "zrx", aggregatorProxyAddress: "0x6ea4d89474d9410939d429b786208c74853a5b47" },
+    { index: 46, pair: "sand", aggregatorProxyAddress: "0x3d49406edd4d52fb7ffd25485f32e073b529c924" },
+    { index: 47, pair: "bnb", aggregatorProxyAddress: "0x82a6c4af830caa6c97bb504425f6a66165c2c26e" },
+    // { index: 48, pair: "axs", aggregatorProxyAddress: "xxx" },
+    // { index: 49, pair: "grt", aggregatorProxyAddress: "xxx" },
+    // { index: 50, pair: "hbar", aggregatorProxyAddress: "xxx" },
+    // { index: 51, pair: "xmr", aggregatorProxyAddress: "xxx" },
+    // { index: 52, pair: "enj", aggregatorProxyAddress: "xxx" },
+    { index: 53, pair: "ftm", aggregatorProxyAddress: "0x58326c0f831b2dbf7234a4204f28bba79aa06d5f" },
+    // { index: 54, pair: "ftt", aggregatorProxyAddress: "xxx" },
+    { index: 55, pair: "ape", aggregatorProxyAddress: "0x2ac3f3bfac8fc9094bc3f0f9041a51375235b992" },
+    // { index: 56, pair: "chz", aggregatorProxyAddress: "xxx" },
+    // { index: 57, pair: "shib", aggregatorProxyAddress: "xxx" },
+    // ...
+    { index: 102, pair: "avax", aggregatorProxyAddress: "0xe01ea2fbd8d76ee323fbed03eb9a8625ec981a10" },
+    // { index: 103, pair: "atom", aggregatorProxyAddress: "xxx" },
+    // { index: 104, pair: "near", aggregatorProxyAddress: "xxx" },
+    // { index: 105, pair: "qnt", aggregatorProxyAddress: "xxx" },
+    // { index: 106, pair: "iota", aggregatorProxyAddress: "xxx" },
+    // { index: 107, pair: "ton", aggregatorProxyAddress: "xxx" },
+    // { index: 108, pair: "rpl", aggregatorProxyAddress: "xxx" },
   ],
 };
 
@@ -61,7 +83,7 @@ export const ARBITRUM_SPEC: ChainSpec = {
   daiAddress: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
   storageAddress: "0xcFa6ebD475d89dB04cAd5A756fff1cb2BC5bE33c",
   rpcUrl: "wss://arb-mainnet.g.alchemy.com/v2/BnencMGjoPsmbRIjrDZvh4zLTmlZyDtG",
-  // https://data.chain.link/arbitrum/mainnet/crypto-usd
+  // arbitrum chainlink contracts: https://data.chain.link/arbitrum/mainnet/crypto-usd
   pairs: [
     { index: 0, pair: "btc", aggregatorProxyAddress: "0x6ce185860a4963106506c203335a2910413708e9" },
     { index: 1, pair: "eth", aggregatorProxyAddress: "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612" },
@@ -107,8 +129,28 @@ export const ARBITRUM_SPEC: ChainSpec = {
     { index: 41, pair: "mkr", aggregatorProxyAddress: "0xde9f0894670c4efcacf370426f10c3ad2cdf147e" },
     // { index: 42, pair: "neo", aggregatorProxyAddress: "xxx" },
     // { index: 43, pair: "theta", aggregatorProxyAddress: "xxx" },
-    { index: 44, pair: "trx", aggregatorProxyAddress: "xxx" },
-    { index: 45, pair: "zrx", aggregatorProxyAddress: "xxx" },
+    // { index: 44, pair: "trx", aggregatorProxyAddress: "xxx" },
+    // { index: 45, pair: "zrx", aggregatorProxyAddress: "xxx" },
+    // { index: 46, pair: "sand", aggregatorProxyAddress: "xxx" },
+    // { index: 47, pair: "bnb", aggregatorProxyAddress: "xxx" },
+    // { index: 48, pair: "axs", aggregatorProxyAddress: "xxx" },
+    // { index: 49, pair: "grt", aggregatorProxyAddress: "xxx" },
+    // { index: 50, pair: "hbar", aggregatorProxyAddress: "xxx" },
+    // { index: 51, pair: "xmr", aggregatorProxyAddress: "xxx" },
+    // { index: 52, pair: "enj", aggregatorProxyAddress: "xxx" },
+    // { index: 53, pair: "ftm", aggregatorProxyAddress: "xxx" },
+    // { index: 54, pair: "ftt", aggregatorProxyAddress: "xxx" },
+    { index: 55, pair: "ape", aggregatorProxyAddress: "0x221912ce795669f628c51c69b7d0873eda9c03bb" },
+    // { index: 56, pair: "chz", aggregatorProxyAddress: "xxx" },
+    // { index: 57, pair: "shib", aggregatorProxyAddress: "xxx" },
+    // ...
+    // { index: 102, pair: "avax", aggregatorProxyAddress: "xxx" },
+    { index: 103, pair: "atom", aggregatorProxyAddress: "0xcda67618e51762235eaca373894f0c79256768fa" },
+    { index: 104, pair: "near", aggregatorProxyAddress: "0xbf5c3fb2633e924598a46b9d07a174a9dbcf57c0" },
+    // { index: 105, pair: "qnt", aggregatorProxyAddress: "xxx" },
+    // { index: 106, pair: "iota", aggregatorProxyAddress: "xxx" },
+    // { index: 107, pair: "ton", aggregatorProxyAddress: "xxx" },
+    // { index: 108, pair: "rpl", aggregatorProxyAddress: "xxx" },
   ],
 };
 
@@ -164,6 +206,46 @@ export const MUMBAI_SPEC: ChainSpec = {
     // { index: 43, pair: "theta", aggregatorProxyAddress: "xxx" },
     // { index: 44, pair: "trx", aggregatorProxyAddress: "xxx" },
     // { index: 45, pair: "zrx", aggregatorProxyAddress: "xxx" },
+    // { index: 46, pair: "sand", aggregatorProxyAddress: "xxx" },
+    // { index: 47, pair: "bnb", aggregatorProxyAddress: "xxx" },
+    // { index: 48, pair: "axs", aggregatorProxyAddress: "xxx" },
+    // { index: 49, pair: "grt", aggregatorProxyAddress: "xxx" },
+    // { index: 50, pair: "hbar", aggregatorProxyAddress: "xxx" },
+    // { index: 51, pair: "xmr", aggregatorProxyAddress: "xxx" },
+    // { index: 52, pair: "enj", aggregatorProxyAddress: "xxx" },
+    // { index: 53, pair: "ftm", aggregatorProxyAddress: "xxx" },
+    // { index: 54, pair: "ftt", aggregatorProxyAddress: "xxx" },
+    // { index: 55, pair: "ape", aggregatorProxyAddress: "xxx" },
+    // { index: 56, pair: "chz", aggregatorProxyAddress: "xxx" },
+    // { index: 57, pair: "shib", aggregatorProxyAddress: "xxx" },
+    // // ...
+    // { index: 102, pair: "avax", aggregatorProxyAddress: "xxx" },
+    // { index: 103, pair: "atom", aggregatorProxyAddress: "xxx" },
+    // { index: 104, pair: "near", aggregatorProxyAddress: "xxx" },
+    // { index: 105, pair: "qnt", aggregatorProxyAddress: "xxx" },
+    // { index: 106, pair: "iota", aggregatorProxyAddress: "xxx" },
+    // { index: 107, pair: "ton", aggregatorProxyAddress: "xxx" },
+    // { index: 108, pair: "rpl", aggregatorProxyAddress: "xxx" },
+    // { index: 46, pair: "sand", aggregatorProxyAddress: "xxx" },
+    // { index: 47, pair: "bnb", aggregatorProxyAddress: "xxx" },
+    // { index: 48, pair: "axs", aggregatorProxyAddress: "xxx" },
+    // { index: 49, pair: "grt", aggregatorProxyAddress: "xxx" },
+    // { index: 50, pair: "hbar", aggregatorProxyAddress: "xxx" },
+    // { index: 51, pair: "xmr", aggregatorProxyAddress: "xxx" },
+    // { index: 52, pair: "enj", aggregatorProxyAddress: "xxx" },
+    // { index: 53, pair: "ftm", aggregatorProxyAddress: "xxx" },
+    // { index: 54, pair: "ftt", aggregatorProxyAddress: "xxx" },
+    // { index: 55, pair: "ape", aggregatorProxyAddress: "xxx" },
+    // { index: 56, pair: "chz", aggregatorProxyAddress: "xxx" },
+    // { index: 57, pair: "shib", aggregatorProxyAddress: "xxx" },
+    // // ...
+    // { index: 102, pair: "avax", aggregatorProxyAddress: "xxx" },
+    // { index: 103, pair: "atom", aggregatorProxyAddress: "xxx" },
+    // { index: 104, pair: "near", aggregatorProxyAddress: "xxx" },
+    // { index: 105, pair: "qnt", aggregatorProxyAddress: "xxx" },
+    // { index: 106, pair: "iota", aggregatorProxyAddress: "xxx" },
+    // { index: 107, pair: "ton", aggregatorProxyAddress: "xxx" },
+    // { index: 108, pair: "rpl", aggregatorProxyAddress: "xxx" },
   ],
 };
 
