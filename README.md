@@ -85,7 +85,7 @@ node_modules/.bin/ts-node src/cli.ts
 node_modules/.bin/ts-node src/cli.ts showKeys
 node_modules/.bin/ts-node src/cli.ts gTradeStats
 # start the server
-nohup node_modules/.bin/ts-node src/app.ts &
+nohup node_modules/.bin/ts-node src/app.ts 2>&1 &
 tail -f nohup.out
 # open http://18.214.16.179/dashboard for dashboard
 ```

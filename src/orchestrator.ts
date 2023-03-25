@@ -5,7 +5,7 @@ import { log } from "./log";
 import { LedgerTrade, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
 import { GTrade, Trade } from "./gtrade";
-import { shortPubkey, sleep } from "./utils";
+import { schedule, shortPubkey, sleep, toFixed } from "./utils";
 import { Notifier } from "./notifications";
 
 interface AssetState {
@@ -29,6 +29,13 @@ export class Orchestrator {
     this.config = config;
     this.gtrade = gtrade;
     this.notifier = notifier;
+    schedule(async () => {
+      log.info(
+        `health check eth/matic: ${toFixed(await gtrade.getBalance(), 4)} dai: ${toFixed(await gtrade.getDaiBalance(), 2)} openTrades: ${[
+          ...(await gtrade.getOpenTradeCounts()).entries(),
+        ].map(([k, v]) => `${k}:${v}`)}`
+      );
+    }, 60 * 10 * 1000);
   }
 
   async handleMonitoredEvent(event: MarketOrderInitiated) {
