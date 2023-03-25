@@ -1,0 +1,18 @@
+{
+  "closeTradesAtStart": true,
+  "traderChainSpec": "mumbai",
+  "listenerChainSpec": "arbitrum",
+  "webServerPort": 80,
+  "notifications": {
+    "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
+    "telegramChatId": "-873100380"
+  },
+  "assetMappings": [
+    { "asset": "btc", "cashAmount": 500, "leverage": 3 },
+    { "asset": "eth", "cashAmount": 500, "leverage": 3 },
+    { "asset": "link", "cashAmount": 500, "leverage": 3 },
+    { "asset": "matic", "cashAmount": 500, "leverage": 3 },
+    { "asset": "eurusd", "cashAmount": 500, "leverage": 3 }
+  ],
+  "monitoredTrader": "0x6526f030ede4fe6a4d861c7c5823e47022cfb7ba"
+}
