@@ -14,6 +14,6 @@
     { "asset": "matic", "cashAmount": 500, "leverage": 3 },
     { "asset": "eurusd", "cashAmount": 500, "leverage": 3 }
   ],
-  "monitoredTrader": "0x0A1822364DeA5F4eD18b6fC4C7bd38FCD8B83789",
+  "monitoredTrader": "0x844e3749100549a67F046F4fd051b1Fa87b29892",
   "mockParams": { "bogusTrader": "bogus-trader" }
 }
