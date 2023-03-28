@@ -1,7 +1,7 @@
 #!ts-node
 
 import { loadConfig } from "./configuration";
-import { bumpRestartCount, sleep } from "./utils";
+import { bumpRestartCount, schedule, sleep, toFixed } from "./utils";
 import { startExpress } from "./webserver";
 import { log } from "./log";
 import { Orchestrator } from "./orchestrator";
@@ -33,6 +33,15 @@ async function main() {
 
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
+
+  schedule(async () => {
+    log.info(
+      `health check eth/matic: ${toFixed(await gtrader.getBalance(), 4)} dai: ${toFixed(await gtrader.getDaiBalance(), 2)} openTrades: ${[
+        ...(await gtrader.getOpenTradeCounts()).entries(),
+      ].map(([k, v]) => `${k}:${v}`)}`
+    );
+  }, 60 * 10 * 1000);
+
   glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
     const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);
     if (pair) {
