@@ -7,7 +7,8 @@ import { loadConfig } from "./configuration";
 import { log } from "./log";
 import { Notifier } from "./notifications";
 import { sleep } from "./utils";
-import { GTrade, getChainSpec } from "./gtrade";
+import { GTrade } from "./gtrade";
+import { getChainSpec } from "./gtrade/chainspec";
 
 export const WALLET_PRIV_KEY = "ec03990c0814273acd86027a03fdf4c2da1eba2d70646f7bd493743c4d9f0f57";
 export const WALLET_PUB_KEY = "0xcF56D6c5e292a472035810a8bd3ef41BBb645C01";
@@ -75,6 +76,7 @@ async function main() {
       log.info(`========== gTrade stats ==========
 pubkey:          ${config.wallet.address}
 monitoredPubkey: ${config.monitoredTrader}
+tradingContract: ${await gtrade.getTradingContractAddress()}
 allowance:       ${await gtrade.getAllowance()}
 balance:         ${await gtrade.getBalance()}
 daiBalance:      ${await gtrade.getDaiBalance()}

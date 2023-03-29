@@ -1,7 +1,7 @@
 {
   "closeTradesAtStart": true,
   "traderChainSpec": "mumbai",
-  "listenerChainSpec": "mumbai",
+  "listenerChainSpec": "arbitrum",
   "webServerPort": 80,
   "notifications": {
     "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
@@ -14,6 +14,5 @@
     { "asset": "matic", "cashAmount": 500, "leverage": 3 },
     { "asset": "eurusd", "cashAmount": 500, "leverage": 3 }
   ],
-  "monitoredTrader": "0x844e3749100549a67F046F4fd051b1Fa87b29892",
-  "mockParams": { "bogusTrader": "bogus-trader" }
+  "monitoredTrader": "0x6526f030ede4fe6a4d861c7c5823e47022cfb7ba"
 }
