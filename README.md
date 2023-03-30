@@ -48,14 +48,17 @@ src/cli.ts closeAllTrades
 
 Following is my setup, guided by desire not to be limited by network bandwidth (suits websockets). Note: following assumes:
 
-- 18.214.16.179 is your ubuntu ec2 instance, with port 80 open
+- deploy on non-burstable instance with decent network bandwidth, to avoid issues with closed websockets
+  - https://aws.amazon.com/ec2/pricing/on-demand/
+  - https://www.densify.com/resources/ec2-instance-types/
+- 54.235.31.212 is your ubuntu ec2 instance, with port 80 open
 - `gbot.pem` aws keypair has created
 - `aws-deployment` priv key has been setup in github
 - `<my-pub-key>` = your wallet priv key, with appropriate funds for given chain
 
 ```shell
-scp ~/.ssh/aws-deployment ubuntu@18.214.16.179:~/.ssh
-ssh -i ~/.ssh/gbot.pem ubuntu@18.214.16.179
+scp ~/.ssh/aws-deployment ubuntu@54.235.31.212:~/.ssh
+ssh -i ~/.ssh/gbot.pem ubuntu@54.235.31.212
 # inside the ec2 terminal...
 # ensure we can clone from github
 chmod 400 ~/.ssh/aws-deployment
@@ -87,5 +90,5 @@ node_modules/.bin/ts-node src/cli.ts gTradeStats
 # start the server
 nohup node_modules/.bin/ts-node src/app.ts 2>&1 &
 tail -f nohup.out
-# open http://18.214.16.179/dashboard for dashboard
+# open http://54.235.31.212/dashboard for dashboard
 ```

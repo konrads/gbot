@@ -6,7 +6,7 @@ import { startExpress } from "./webserver";
 import { log } from "./log";
 import { Orchestrator } from "./orchestrator";
 import { Notifier } from "./notifications";
-import { ChainSpec, GTrade } from "./gtrade";
+import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
 async function main() {
@@ -35,12 +35,13 @@ async function main() {
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
 
   schedule(async () => {
+    log.info(`health check start`);
     log.info(
       `health check eth/matic: ${toFixed(await gtrader.getBalance(), 4)} dai: ${toFixed(await gtrader.getDaiBalance(), 2)} openTrades: ${[
         ...(await gtrader.getOpenTradeCounts()).entries(),
       ].map(([k, v]) => `${k}:${v}`)}`
     );
-  }, 60 * 10 * 1000);
+  }, 60 * 1 * 1000);
 
   glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
     const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);
