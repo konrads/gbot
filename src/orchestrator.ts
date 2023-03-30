@@ -5,7 +5,7 @@ import { log } from "./log";
 import { LedgerTrade, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
 import { GTrade, Trade } from "./gtrade";
-import { shortPubkey, sleep } from "./utils";
+import { shortPubkey, sleep, unique } from "./utils";
 import { Notifier } from "./notifications";
 
 interface AssetState {
@@ -24,11 +24,111 @@ export class Orchestrator {
   private readonly mutex: Mutex = new Mutex();
   private readonly closedTrades: LedgerTrade[] = [];
   private readonly prices: Map<string, { price: number; ts: Date }> = new Map();
+  // blockedToOpen criteria:
+  // - snapshot suggests to open AND (snapshotCnt == 0 OR already blocked) -> blocked ... ie. potentially opened a while ago?
+  // - else -> unblocked
+  private blockedToOpen: Set<string> = new Set();
+  private snapshotCnt = 0;
 
   constructor(config: Config, gtrade: GTrade, notifier: Notifier) {
     this.config = config;
     this.gtrade = gtrade;
     this.notifier = notifier;
+    this.blockedToOpen = new Set(config.assetMappings.map((x) => x.asset));
+  }
+
+  async updateSnapshot(myTrades: Trade[], monitoredTrades: Trade[]) {
+    const myTradeByPair: Map<string, Trade> = new Map(myTrades.filter(({ index }) => index == 0).map((trade): [string, Trade] => [trade.pair, trade]));
+    const monitoredTradeByPair: Map<string, Trade> = new Map(
+      monitoredTrades.filter(({ index }) => index == 0).map((trade): [string, Trade] => [trade.pair, trade])
+    );
+
+    const allPairs = this.config.assetMappings.map((x) => x.asset);
+    this.snapshotCnt += 1;
+    log.debug(
+      `Snapshot: cnt ${this.snapshotCnt}, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen))} myTrades: ${JSON.stringify(
+        myTrades
+      )}, monitoredTrades: ${JSON.stringify(monitoredTrades)}, assetStates: ${JSON.stringify(this.assetStates)}`
+    );
+    const effects: MarketOrderInitiated[] = allPairs
+      .map((pair) => {
+        const myTrade = myTradeByPair.get(pair);
+        const monitoredTrade = monitoredTradeByPair.get(pair);
+        let assetState = this.assetStates.get(pair);
+
+        if (myTrade || monitoredTrade || assetState) {
+          // update assetState first
+          const myTradeDir: "buy" | "sell" = !myTrade ? undefined : myTrade?.buy ? "buy" : "sell";
+          if (myTrade && assetState?.trade?.dir != myTradeDir) {
+            const newAssetState = {
+              status: "open" as any,
+              trade: {
+                pair: myTrade.pair,
+                dir: myTradeDir,
+                size: myTrade.positionSizeDai,
+                leverage: myTrade.leverage,
+                openPrice: myTrade.openPrice,
+                openTs: assetState?.trade?.openTs ?? new Date(),
+              },
+            };
+            this.assetStates.set(myTrade.pair, newAssetState);
+            log.info(`Snapshot: ${pair}, overwriting ${JSON.stringify(assetState)} => ${JSON.stringify(newAssetState)}`);
+            assetState = newAssetState;
+          } else if (!myTrade) {
+            this.assetStates.delete(pair);
+          }
+        }
+
+        if (monitoredTrade && (assetState?.status ?? "idle") == "idle") {
+          // console.log("##### 0 ", pair);
+          // missed open
+          if (this.snapshotCnt == 1) this.blockedToOpen.add(pair);
+          if (!this.blockedToOpen.has(pair)) {
+            // console.log("##### 0.1 ", pair);
+            return {
+              orderId: -111,
+              trader: this.config.monitoredTrader,
+              pair,
+              open: true,
+            };
+          }
+        } else if (monitoredTrade && assetState?.status == "open") {
+          // console.log("##### 1 ", pair, JSON.stringify(monitoredTrade), JSON.stringify(assetState));
+          const monitoredTradeDir: "buy" | "sell" = monitoredTrade.buy ? "buy" : "sell";
+          if (assetState?.trade?.dir != monitoredTradeDir) {
+            // console.log("##### 1.1 ", pair);
+            // have wrong dir, close
+            if (this.snapshotCnt == 1) this.blockedToOpen.add(pair);
+            return {
+              orderId: -222,
+              trader: this.config.monitoredTrader,
+              pair,
+              open: false,
+            };
+          }
+        } else {
+          // console.log("##### 2 ", pair);
+          this.blockedToOpen.delete(pair);
+          if (!monitoredTrade && assetState?.status == "open") {
+            // console.log("##### 2.1 ", pair);
+            return {
+              orderId: -333,
+              trader: this.config.monitoredTrader,
+              pair,
+              open: false,
+            };
+          }
+        }
+      })
+      .filter((x) => x);
+    if (effects.length == 0) log.debug(`Snapshot: Issuing no trades, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen))}`);
+    else
+      log.info(
+        `Snapshot: Issuing trades: ${effects.map((x) => `${x.pair} => ${x.open ? "open" : "close"}`).join(", ")}, blockedToOpen: ${JSON.stringify(
+          Array.from(this.blockedToOpen)
+        )}`
+      );
+    await Promise.all(effects.map(async (x) => this.handleMonitoredEvent(x)));
   }
 
   async handleMonitoredEvent(event: MarketOrderInitiated) {

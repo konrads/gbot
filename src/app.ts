@@ -9,6 +9,9 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
+const HEALTHCHECK_INTERVAL_MS = 60 * 10 * 1000;
+const SNAPSHOT_INTERVAL_MS = 60 * 1 * 1000;
+
 async function main() {
   const config = loadConfig();
   log.info(`Starting Gbot with config:
@@ -21,12 +24,12 @@ async function main() {
   const traderChainSpec: ChainSpec = getChainSpec(config.traderChainSpec);
   const gtrader = new GTrade(config.wallet.privateKey, traderChainSpec);
 
-  if (config.closeTradesAtStart) {
-    log.info(`Bootstrap: closeTradesAtStart requested...`);
-    const tradesClosed = await gtrader.closeAllTrades();
-    if (tradesClosed.size > 0) log.info(`Bootstrap: closed trades ${[...tradesClosed.entries()].map(([pair, cnt]) => `${pair}:${cnt}`).join(", ")}`);
-    else log.info(`Bootstrap: no trades to close`);
-  }
+  // if (config.closeTradesAtStart) {
+  //   log.info(`Bootstrap: closeTradesAtStart requested...`);
+  //   const tradesClosed = await gtrader.closeAllTrades();
+  //   if (tradesClosed.size > 0) log.info(`Bootstrap: closed trades ${[...tradesClosed.entries()].map(([pair, cnt]) => `${pair}:${cnt}`).join(", ")}`);
+  //   else log.info(`Bootstrap: no trades to close`);
+  // }
 
   const notifier = new Notifier(config.notifications);
   const orchestrator = new Orchestrator(config, gtrader, notifier);
@@ -34,14 +37,33 @@ async function main() {
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
 
+  // schedule health check
   schedule(async () => {
     log.info(`health check start`);
-    log.info(
-      `health check eth/matic: ${toFixed(await gtrader.getBalance(), 4)} dai: ${toFixed(await gtrader.getDaiBalance(), 2)} openTrades: ${[
-        ...(await gtrader.getOpenTradeCounts()).entries(),
-      ].map(([k, v]) => `${k}:${v}`)}`
-    );
-  }, 60 * 1 * 1000);
+    try {
+      log.info(
+        `health check eth/matic: ${toFixed(await gtrader.getBalance(), 4)} dai: ${toFixed(await gtrader.getDaiBalance(), 2)} openTrades: ${[
+          ...(await gtrader.getOpenTradeCounts()).entries(),
+        ].map(([k, v]) => `${k}:${v}`)}`
+      );
+    } catch (e) {
+      log.warn(`health check error ${e}`);
+      throw e;
+    }
+  }, HEALTHCHECK_INTERVAL_MS);
+
+  // schedule snapshot update
+  const allAssets = config.assetMappings.map((x) => x.asset);
+  schedule(async () => {
+    try {
+      const myTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p)))).flat();
+      const monitoredTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p, config.monitoredTrader)))).flat();
+      await orchestrator.updateSnapshot(myTrades, monitoredTrades);
+    } catch (e) {
+      log.warn(`Snapshot error ${e}`);
+      throw e;
+    }
+  }, SNAPSHOT_INTERVAL_MS);
 
   glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
     const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);

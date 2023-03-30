@@ -248,10 +248,10 @@ export class GTrade {
         };
         await callback(event);
       })
-      .on("connected", async (subId) => log.warn("MarketOrderInitiated connected", subId))
-      .on("disconnected", async (subId) => log.warn("MarketOrderInitiated disconnected", subId))
-      .on("changed", async (event) => log.warn("MarketOrderInitiated changed", event))
-      .on("error", async (error, receipt) => log.warn("MarketOrderInitiated error", error, receipt));
+      .on("connected", async (subId) => log.warn("WS subscription MarketOrderInitiated connected", subId))
+      .on("disconnected", async (subId) => log.warn("WS subscription MarketOrderInitiated disconnected", subId))
+      .on("changed", async (event) => log.warn("WS subscription MarketOrderInitiated changed", event))
+      .on("error", async (error, receipt) => log.warn("WS subscription MarketOrderInitiated error", error, receipt));
   }
 
   async subscribeCouldNotCloseTrade(traderAddresses: string[], callback: (event: CouldNotCloseTrade) => Promise<void>) {
@@ -266,10 +266,10 @@ export class GTrade {
         };
         await callback(event);
       })
-      .on("connected", async (subId) => log.warn("CouldNotCloseTrade connected", subId))
-      .on("disconnected", async (subId) => log.warn("CouldNotCloseTrade disconnected", subId))
-      .on("changed", async (event) => log.warn("CouldNotCloseTrade changed", event))
-      .on("error", async (error, receipt) => log.warn("CouldNotCloseTrade error", error, receipt));
+      .on("connected", async (subId) => log.warn("WS subscription CouldNotCloseTrade connected", subId))
+      .on("disconnected", async (subId) => log.warn("WS subscription CouldNotCloseTrade disconnected", subId))
+      .on("changed", async (event) => log.warn("WS subscription CouldNotCloseTrade changed", event))
+      .on("error", async (error, receipt) => log.warn("WS subscription CouldNotCloseTrade error", error, receipt));
   }
 
   async subscribeAggregatorEvents(callback: (event: PriceReceived) => Promise<void>) {
@@ -289,9 +289,9 @@ export class GTrade {
         await callback(event);
         await callback(event);
       })
-      .on("connected", async (subId) => log.warn("PriceReceived connected", subId))
-      .on("disconnected", async (subId) => log.warn("PriceReceived disconnected", subId))
-      .on("changed", async (event) => log.warn("PriceReceived changed", event))
-      .on("error", async (error, receipt) => log.warn("PriceReceived error", error, "receipt", receipt));
+      .on("connected", async (subId) => log.warn("WS subscription PriceReceived connected", subId))
+      .on("disconnected", async (subId) => log.warn("WS subscription PriceReceived disconnected", subId))
+      .on("changed", async (event) => log.warn("WS subscription PriceReceived changed", event))
+      .on("error", async (error, receipt) => log.warn("WS subscription PriceReceived error", error, "receipt", receipt));
   }
 }
