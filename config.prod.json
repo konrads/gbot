@@ -12,5 +12,5 @@
     { "asset": "SOL", "cashAmount": 100, "leverage": 15 },
     { "asset": "APT", "cashAmount": 100, "leverage": 15 }
   ],
-  "monitoredTrader": "0x0A1822364DeA5F4eD18b6fC4C7bd38FCD8B83789"
+  "monitoredTrader": "0x6526f030Ede4Fe6A4d861C7c5823E47022cFb7bA"
 }

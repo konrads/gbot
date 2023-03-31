@@ -33,6 +33,7 @@ export function loadConfig(): Config {
   const walletPrivKey = fs.readFileSync("./wallet.txt", "utf8").trim();
   config.wallet = new Wallet(walletPrivKey);
   validateSchema(config, require("../config.schema.json"));
+  if (config.wallet.address.toUpperCase() == config.monitoredTrader.toUpperCase()) throw new Error(`Cannot have my wallet.address == config.monitoredTrader!`);
   return config;
 }
 

@@ -30,6 +30,22 @@ async function main() {
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
 
+  const restartCnt = await bumpRestartCount();
+  startExpress(config, orchestrator);
+
+  const die = async (reason: string) => {
+    log.info(`Shutting down due to ${reason}`);
+    await notifier.publish(`Shutting down due to ${reason}`);
+    process.exit(1);
+  };
+
+  process.on("SIGINT", async () => {
+    await die("SIGINT");
+  });
+  process.on("SIGTERM", async () => {
+    await die("SIGTERM");
+  });
+
   // schedule health check
   schedule(async () => {
     log.info(`health check start`);
@@ -40,8 +56,7 @@ async function main() {
         ].map(([k, v]) => `${k}:${v}`)}`
       );
     } catch (e) {
-      log.warn(`health check error ${e}`);
-      throw e;
+      die(`health check error ${e}`);
     }
   }, HEALTHCHECK_INTERVAL_MS);
 
@@ -53,8 +68,7 @@ async function main() {
       const monitoredTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p, config.monitoredTrader)))).flat();
       await orchestrator.updateSnapshot(myTrades, monitoredTrades);
     } catch (e) {
-      log.warn(`Snapshot error ${e}`);
-      throw e;
+      die(`Snapshot error ${e}`);
     }
   }, SNAPSHOT_INTERVAL_MS);
 
@@ -64,22 +78,6 @@ async function main() {
       event.pair = pair.pair;
       orchestrator.handleMonitoredEvent(event);
     } else log.debug(`Listener received unsupported event ${JSON.stringify(event)}`);
-  });
-
-  const die = async (reason: string) => {
-    log.info(`Shutting down due to ${reason}`);
-    await notifier.publish(`Shutting down due to ${reason}`);
-    process.exit(1);
-  };
-
-  const restartCnt = await bumpRestartCount();
-  startExpress(config, orchestrator);
-
-  process.on("SIGINT", async () => {
-    await die("SIGINT");
-  });
-  process.on("SIGTERM", async () => {
-    await die("SIGTERM");
   });
 
   notifier.publish(`Gbot restart: ${restartCnt}`);

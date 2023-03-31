@@ -2,10 +2,6 @@
   "traderChainSpec": "mumbai",
   "listenerChainSpec": "mumbai",
   "webServerPort": 80,
-  "notifications": {
-    "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
-    "telegramChatId": "-873100380"
-  },
   "assetMappings": [
     { "asset": "btc", "cashAmount": 500, "leverage": 3 },
     { "asset": "eth", "cashAmount": 500, "leverage": 3 },
