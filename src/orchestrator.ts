@@ -5,7 +5,7 @@ import { log } from "./log";
 import { LedgerTrade, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
 import { GTrade, Trade } from "./gtrade";
-import { shortPubkey, sleep, unique } from "./utils";
+import { shortPubkey, sleep } from "./utils";
 import { Notifier } from "./notifications";
 
 interface AssetState {
@@ -27,14 +27,14 @@ export class Orchestrator {
   // blockedToOpen criteria:
   // - snapshot suggests to open AND (snapshotCnt == 0 OR already blocked) -> blocked ... ie. potentially opened a while ago?
   // - else -> unblocked
-  private blockedToOpen: Set<string> = new Set();
-  private snapshotCnt = 0;
+  private blockedToOpen_: Set<string> = new Set();
+  private snapshotCnt_ = 0;
 
   constructor(config: Config, gtrade: GTrade, notifier: Notifier) {
     this.config = config;
     this.gtrade = gtrade;
     this.notifier = notifier;
-    this.blockedToOpen = new Set(config.assetMappings.map((x) => x.asset));
+    this.blockedToOpen_ = new Set(config.assetMappings.map((x) => x.asset));
   }
 
   async updateSnapshot(myTrades: Trade[], monitoredTrades: Trade[]) {
@@ -44,9 +44,9 @@ export class Orchestrator {
     );
 
     const allPairs = this.config.assetMappings.map((x) => x.asset);
-    this.snapshotCnt += 1;
+    this.snapshotCnt_ += 1;
     log.debug(
-      `Snapshot: cnt ${this.snapshotCnt}, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen))} myTrades: ${JSON.stringify(
+      `Snapshot: cnt ${this.snapshotCnt_}, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen_))} myTrades: ${JSON.stringify(
         myTrades
       )}, monitoredTrades: ${JSON.stringify(monitoredTrades)}, assetStates: ${JSON.stringify(this.assetStates)}`
     );
@@ -81,8 +81,8 @@ export class Orchestrator {
 
         if (monitoredTrade && (assetState?.status ?? "idle") == "idle") {
           // missed open
-          if (this.snapshotCnt == 1) this.blockedToOpen.add(pair);
-          if (!this.blockedToOpen.has(pair)) {
+          if (this.snapshotCnt_ == 1) this.blockedToOpen_.add(pair);
+          if (!this.blockedToOpen_.has(pair)) {
             // console.log("##### 0.1 ", pair);
             return {
               orderId: -111,
@@ -95,7 +95,7 @@ export class Orchestrator {
           const monitoredTradeDir: "buy" | "sell" = monitoredTrade.buy ? "buy" : "sell";
           if (assetState?.trade?.dir != monitoredTradeDir) {
             // have wrong dir, close
-            if (this.snapshotCnt == 1) this.blockedToOpen.add(pair);
+            if (this.snapshotCnt_ == 1) this.blockedToOpen_.add(pair);
             return {
               orderId: -222,
               trader: this.config.monitoredTrader,
@@ -104,7 +104,7 @@ export class Orchestrator {
             };
           }
         } else {
-          this.blockedToOpen.delete(pair);
+          this.blockedToOpen_.delete(pair);
           if (!monitoredTrade && assetState?.status == "open")
             return {
               orderId: -333,
@@ -115,11 +115,11 @@ export class Orchestrator {
         }
       })
       .filter((x) => x);
-    if (effects.length == 0) log.debug(`Snapshot: Issuing no trades, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen))}`);
+    if (effects.length == 0) log.debug(`Snapshot: Issuing no trades, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen_))}`);
     else
       log.info(
         `Snapshot: Issuing trades: ${effects.map((x) => `${x.pair} => ${x.open ? "open" : "close"}`).join(", ")}, blockedToOpen: ${JSON.stringify(
-          Array.from(this.blockedToOpen)
+          Array.from(this.blockedToOpen_)
         )}`
       );
     await Promise.all(effects.map(async (x) => this.handleMonitoredEvent(x)));
@@ -203,6 +203,14 @@ export class Orchestrator {
 
   get assetPrices(): Map<string, { price: number; ts: Date }> {
     return this.prices;
+  }
+
+  get snapshotCnt(): number {
+    return this.snapshotCnt_;
+  }
+
+  get blockedToOpen(): Set<string> {
+    return this.blockedToOpen_;
   }
 
   private async waitOpenTrades(pair: string, trader: string, expectSome: boolean): Promise<Trade[]> {

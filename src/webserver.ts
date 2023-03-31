@@ -46,6 +46,8 @@ export function startExpress(config: Config, orchestrator: Orchestrator) {
           pnl: ((x.size * x.leverage * (x.closePrice! - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1),
         };
       }),
+      blockedToOpen: [...orchestrator.blockedToOpen].join(", "),
+      snapshotCnt: orchestrator.snapshotCnt,
     };
     res.render("dashboard", ctx);
   });
