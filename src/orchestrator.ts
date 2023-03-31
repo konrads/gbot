@@ -34,7 +34,6 @@ export class Orchestrator {
     this.config = config;
     this.gtrade = gtrade;
     this.notifier = notifier;
-    this.blockedToOpen_ = new Set(config.assetMappings.map((x) => x.asset));
   }
 
   async updateSnapshot(myTrades: Trade[], monitoredTrades: Trade[]) {
@@ -83,7 +82,6 @@ export class Orchestrator {
           // missed open
           if (this.snapshotCnt_ == 1) this.blockedToOpen_.add(pair);
           if (!this.blockedToOpen_.has(pair)) {
-            // console.log("##### 0.1 ", pair);
             return {
               orderId: -111,
               trader: this.config.monitoredTrader,

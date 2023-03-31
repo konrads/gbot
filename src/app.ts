@@ -9,7 +9,7 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
-const HEALTHCHECK_INTERVAL_MS = 60 * 10 * 1000;
+const HEALTHCHECK_INTERVAL_MS = 60 * 2 * 1000;
 const SNAPSHOT_INTERVAL_MS = 60 * 1 * 1000;
 
 async function main() {
