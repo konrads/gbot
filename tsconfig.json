@@ -1,18 +1,14 @@
 {
     "compilerOptions": {
       "module": "commonjs",
-      "target": "es2020",
-      "lib": ["es2020"],
+      "target": "es2021",
+      "lib": ["es2021"],
       "declaration": true,
       "outDir": "./dist",
       "esModuleInterop": true,
       "resolveJsonModule": true,
       "skipLibCheck": true
     },
-    "include": ["./src/**/*", "tmp/orchestrator.ts", "tmp/app.ts", "tmp/mocks.ts", "tmp/trader.ts", "tmp/state.ts"],
-    "exclude": ["**/node_modules/**/*"],
-    "typedocOptions": {
-      "entryPoints": ["src/index.ts"],
-      "out": "docs"
-    }
+    "include": ["./src/**/*"],
+    "exclude": ["**/node_modules/**/*"]
   }

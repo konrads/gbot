@@ -20,7 +20,7 @@ export function startExpress(config: Config, orchestrator: Orchestrator) {
   expressApp.get("/dashboard", (req, res) => {
     const myClosedTrades = orchestrator.myClosedTrades;
     const pnl = myClosedTrades
-      .map((x) => ((x.size * x.leverage * (x.closePrice - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1))
+      .map((x) => ((x.size * x.leverage * (x.closePrice! - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1))
       .reduce((x, y) => x + y, 0);
 
     const ctx = {
@@ -43,7 +43,7 @@ export function startExpress(config: Config, orchestrator: Orchestrator) {
         return {
           ts: x.openTs.toLocaleString(),
           trade: `${x.pair}: ${x.dir} ${x.size} @ ${toFixed(x.openPrice, 2)}->${toFixed(x.closePrice, 2)}`,
-          pnl: ((x.size * x.leverage * (x.closePrice - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1),
+          pnl: ((x.size * x.leverage * (x.closePrice! - x.openPrice)) / x.openPrice) * (x.dir == "buy" ? 1 : -1),
         };
       }),
     };

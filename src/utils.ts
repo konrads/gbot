@@ -28,7 +28,7 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function toFixed(x: number, fractionDigits: number): number {
+export function toFixed(x: number | undefined, fractionDigits: number): number | undefined {
   if (x != undefined) {
     return +x.toFixed(fractionDigits);
   }

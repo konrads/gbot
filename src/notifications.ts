@@ -3,9 +3,9 @@ import { log } from "./log";
 import { Notifications } from "./configuration";
 
 export class Notifier {
-  private notificationsDetails: Notifications;
+  private notificationsDetails?: Notifications;
 
-  constructor(notificationsDetails: Notifications) {
+  constructor(notificationsDetails?: Notifications) {
     this.notificationsDetails = notificationsDetails;
     if (!notificationsDetails?.telegramToken) log.warn(`No telegramToken/telegramChatId specified, will log but not publish to Telegram!`);
   }

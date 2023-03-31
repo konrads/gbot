@@ -1,5 +1,4 @@
 {
-  "closeTradesAtStart": false,
   "traderChainSpec": "mumbai",
   "listenerChainSpec": "arbitrum",
   "webServerPort": 80,

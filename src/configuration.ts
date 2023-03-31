@@ -16,7 +16,6 @@ export interface AssetMapping {
 export interface Config {
   traderChainSpec: "polygon" | "arbitrum" | "mumbai";
   listenerChainSpec: "polygon" | "arbitrum" | "mumbai";
-  closeTradesAtStart?: boolean;
   mockParams?: MockParams;
   webServerPort: number;
   notifications?: Notifications;

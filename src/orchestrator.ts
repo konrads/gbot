@@ -80,7 +80,6 @@ export class Orchestrator {
         }
 
         if (monitoredTrade && (assetState?.status ?? "idle") == "idle") {
-          // console.log("##### 0 ", pair);
           // missed open
           if (this.snapshotCnt == 1) this.blockedToOpen.add(pair);
           if (!this.blockedToOpen.has(pair)) {
@@ -93,10 +92,8 @@ export class Orchestrator {
             };
           }
         } else if (monitoredTrade && assetState?.status == "open") {
-          // console.log("##### 1 ", pair, JSON.stringify(monitoredTrade), JSON.stringify(assetState));
           const monitoredTradeDir: "buy" | "sell" = monitoredTrade.buy ? "buy" : "sell";
           if (assetState?.trade?.dir != monitoredTradeDir) {
-            // console.log("##### 1.1 ", pair);
             // have wrong dir, close
             if (this.snapshotCnt == 1) this.blockedToOpen.add(pair);
             return {
@@ -107,17 +104,14 @@ export class Orchestrator {
             };
           }
         } else {
-          // console.log("##### 2 ", pair);
           this.blockedToOpen.delete(pair);
-          if (!monitoredTrade && assetState?.status == "open") {
-            // console.log("##### 2.1 ", pair);
+          if (!monitoredTrade && assetState?.status == "open")
             return {
               orderId: -333,
               trader: this.config.monitoredTrader,
               pair,
               open: false,
             };
-          }
         }
       })
       .filter((x) => x);
