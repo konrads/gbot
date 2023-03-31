@@ -72,7 +72,6 @@ chmod 600 ~/.ssh/config
 # install deps
 sudo apt update
 sudo apt install nodejs npm curl -y
-npm run pm2-install
 curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
 source ~/.bashrc
 nvm install 16.6.0
@@ -89,6 +88,7 @@ node_modules/.bin/ts-node src/cli.ts
 node_modules/.bin/ts-node src/cli.ts showKeys
 node_modules/.bin/ts-node src/cli.ts gTradeStats
 # start the server
+npm run pm2-install
 npm run pm2-start
 pm2 logs
 # open http://54.235.31.212/dashboard for dashboard
