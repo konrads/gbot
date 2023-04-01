@@ -5,7 +5,7 @@ import { log } from "./log";
 import { LedgerTrade, MarketOrderInitiated } from "./types";
 import { Mutex } from "async-mutex";
 import { GTrade, Trade } from "./gtrade";
-import { shortPubkey, sleep } from "./utils";
+import { shortPubkey, sleep, toFixed } from "./utils";
 import { Notifier } from "./notifications";
 
 interface AssetState {
@@ -29,11 +29,25 @@ export class Orchestrator {
   // - else -> unblocked
   private blockedToOpen_: Set<string> = new Set();
   private snapshotCnt_ = 0;
+  private healthCheck_: string = "--";
+  private healthCheckCnt_ = 0;
 
   constructor(config: Config, gtrade: GTrade, notifier: Notifier) {
     this.config = config;
     this.gtrade = gtrade;
     this.notifier = notifier;
+  }
+
+  async updateHealthCheck(): Promise<void> {
+    this.healthCheckCnt_ += 1;
+    this.healthCheck_ = `${this.healthCheckCnt_}, eth/matic: ${toFixed(await this.gtrade.getBalance(), 4)} dai: ${toFixed(
+      await this.gtrade.getDaiBalance(),
+      2
+    )} openTrades: ${[...(await this.gtrade.getOpenTradeCounts()).entries()].map(([k, v]) => `${k}:${v}`)}`;
+  }
+
+  get healthCheck(): string {
+    return this.healthCheck_;
   }
 
   async updateSnapshot(myTrades: Trade[], monitoredTrades: Trade[]) {

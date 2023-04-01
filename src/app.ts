@@ -9,8 +9,7 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
-const HEALTHCHECK_INTERVAL_MS = 60 * 2 * 1000;
-const SNAPSHOT_INTERVAL_MS = 60 * 1 * 1000;
+const INTERVAL_MS = 60 * 1 * 1000;
 
 async function main() {
   const config = loadConfig();
@@ -46,31 +45,18 @@ async function main() {
     await die("SIGTERM");
   });
 
-  // schedule health check
-  schedule(async () => {
-    log.info(`health check start`);
-    try {
-      log.info(
-        `health check eth/matic: ${toFixed(await gtrader.getBalance(), 4)} dai: ${toFixed(await gtrader.getDaiBalance(), 2)} openTrades: ${[
-          ...(await gtrader.getOpenTradeCounts()).entries(),
-        ].map(([k, v]) => `${k}:${v}`)}`
-      );
-    } catch (e) {
-      die(`health check error ${e}`);
-    }
-  }, HEALTHCHECK_INTERVAL_MS);
-
-  // schedule snapshot update
+  // schedule snapshot & health check update
   const allAssets = config.assetMappings.map((x) => x.asset);
   schedule(async () => {
     try {
       const myTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p)))).flat();
       const monitoredTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p, config.monitoredTrader)))).flat();
       await orchestrator.updateSnapshot(myTrades, monitoredTrades);
+      await orchestrator.updateHealthCheck();
     } catch (e) {
       die(`Snapshot error ${e}`);
     }
-  }, SNAPSHOT_INTERVAL_MS);
+  }, INTERVAL_MS);
 
   glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
     const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);

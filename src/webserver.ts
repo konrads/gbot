@@ -48,6 +48,7 @@ export function startExpress(config: Config, orchestrator: Orchestrator) {
       }),
       blockedToOpen: [...orchestrator.blockedToOpen].join(", "),
       snapshotCnt: orchestrator.snapshotCnt,
+      healthCheck: orchestrator.healthCheck,
     };
     res.render("dashboard", ctx);
   });
