@@ -9,7 +9,7 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
-const INTERVAL_MS = 60 * 1 * 1000;
+const INTERVAL_MS = 60 * 1000; // every 60 sec
 
 async function main() {
   const config = loadConfig();
@@ -22,12 +22,10 @@ async function main() {
 `);
   const traderChainSpec: ChainSpec = getChainSpec(config.traderChainSpec);
   const gtrader = new GTrade(config.wallet.privateKey, traderChainSpec);
-
-  const notifier = new Notifier(config.notifications);
-  const orchestrator = new Orchestrator(config, gtrader, notifier);
-
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
+  const notifier = new Notifier(config.notifications);
+  const orchestrator = new Orchestrator(config, gtrader, glistener, notifier);
 
   const restartCnt = await bumpRestartCount();
   startExpress(config, orchestrator);
@@ -58,13 +56,13 @@ async function main() {
     }
   }, INTERVAL_MS);
 
-  glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
-    const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);
-    if (pair) {
-      event.pair = pair.pair;
-      orchestrator.handleMonitoredEvent(event);
-    } else log.debug(`Listener received unsupported event ${JSON.stringify(event)}`);
-  });
+  // glistener.subscribeMarketOrderInitiated([config.monitoredTrader], async (event) => {
+  //   const pair = listenerChainSpec.pairs.find((x) => x.index == event.pairIndex);
+  //   if (pair) {
+  //     event.pair = pair.pair;
+  //     orchestrator.handleMonitoredEvent(event);
+  //   } else log.debug(`Listener received unsupported event ${JSON.stringify(event)}`);
+  // });
 
   notifier.publish(`Gbot restart: ${restartCnt}`);
 }

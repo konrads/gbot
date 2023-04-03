@@ -13,13 +13,14 @@ interface AssetState {
   trade?: LedgerTrade;
 }
 
-const MAX_WAIT_RETRIES = 60;
+const MAX_WAIT_RETRIES = 20;
 const WAIT_SLEEP_MS = 1000;
 
 export class Orchestrator {
   private readonly assetStates: Map<string, AssetState> = new Map();
   private readonly config: Config;
-  private readonly gtrade: GTrade;
+  private readonly gtrader: GTrade;
+  private readonly glistener: GTrade;
   private readonly notifier: Notifier;
   private readonly mutex: Mutex = new Mutex();
   private readonly closedTrades: LedgerTrade[] = [];
@@ -32,18 +33,19 @@ export class Orchestrator {
   private healthCheck_: string = "--";
   private healthCheckCnt_ = 0;
 
-  constructor(config: Config, gtrade: GTrade, notifier: Notifier) {
+  constructor(config: Config, gtrader: GTrade, glistener: GTrade, notifier: Notifier) {
     this.config = config;
-    this.gtrade = gtrade;
+    this.gtrader = gtrader;
+    this.glistener = glistener;
     this.notifier = notifier;
   }
 
   async updateHealthCheck(): Promise<void> {
     this.healthCheckCnt_ += 1;
-    this.healthCheck_ = `${this.healthCheckCnt_}, eth/matic: ${toFixed(await this.gtrade.getBalance(), 4)} dai: ${toFixed(
-      await this.gtrade.getDaiBalance(),
+    this.healthCheck_ = `${this.healthCheckCnt_}, eth/matic: ${toFixed(await this.gtrader.getBalance(), 4)} dai: ${toFixed(
+      await this.gtrader.getDaiBalance(),
       2
-    )} openTrades: ${[...(await this.gtrade.getOpenTradeCounts()).entries()].map(([k, v]) => `${k}:${v}`)}`;
+    )} openTrades: ${[...(await this.gtrader.getOpenTradeCounts()).entries()].map(([k, v]) => `${k}:${v}`)}`;
   }
 
   get healthCheck(): string {
@@ -154,18 +156,17 @@ export class Orchestrator {
           case "idle":
             if (event.open) {
               log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
-              const monitoredTrades = await this.waitOpenTrades(event.pair, event.trader, true);
+              const monitoredTrades = await this.waitOpenTrades(this.glistener, event.pair, event.trader, true);
               if (monitoredTrades.length == 0)
                 log.info(`${state.status}-${event.pair}: Not seeing any open trades for trader ${shortPubkey(event.trader)}, staying idle`);
               else {
                 const firstTrade = monitoredTrades.find((x) => x.index == 0);
-                log.info(`${state.status}-${event.pair}: Following monitored trade ${JSON.stringify(firstTrade)}`);
                 const dir = firstTrade.buy ? "buy" : "sell";
-                const [openPrice] = await this.gtrade.issueMarketTrade(firstTrade.pair, configAsset.cashAmount, configAsset.leverage, dir);
+                const [openPrice] = await this.gtrader.issueMarketTrade(firstTrade.pair, configAsset.cashAmount, configAsset.leverage, dir);
                 const now = new Date();
                 this.prices.set(event.pair, { price: openPrice, ts: now });
                 log.info(`${state.status}-${event.pair}: Issued opened trade @ ${openPrice}`);
-                const myTrades = await this.waitOpenTrades(event.pair, this.config.wallet.address, true);
+                const myTrades = await this.waitOpenTrades(this.gtrader, event.pair, this.config.wallet.address, true);
                 log.info(`${state.status}-${event.pair}: Found ${myTrades.length} confirmed trades`);
                 if (myTrades.length == 0) log.warn(`${state.status}-${event.pair}: Failed to obtain a monitored trade, presuming trade was rejected`);
                 else {
@@ -180,6 +181,7 @@ export class Orchestrator {
                   };
                   this.notifier?.publish(`${state.status}-${event.pair}: Opened ${dir} of ${configAsset.cashAmount} @ $${openPrice}`);
                   state.status = "open";
+                  log.info(`${state.status}-${event.pair}: Monitored order duplicated`);
                 }
               }
             } else log.info(`${state.status}-${event.pair}: Ignoring event close from ${shortPubkey(event.trader)}`);
@@ -188,9 +190,9 @@ export class Orchestrator {
             if (!event.open) {
               log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
               // NOTE: not validating a monitored trade was actually closed
-              const [closePrice] = await this.gtrade.closeTrade(event.pair);
+              const [closePrice] = await this.gtrader.closeTrade(event.pair);
               this.prices.set(event.pair, { price: closePrice, ts: new Date() });
-              const myTrades = await this.waitOpenTrades(event.pair, this.config.wallet.address, false);
+              const myTrades = await this.waitOpenTrades(this.glistener, event.pair, this.config.wallet.address, false);
               if (myTrades.length == 0) {
                 const now = new Date();
                 state.trade.closePrice = closePrice;
@@ -225,10 +227,10 @@ export class Orchestrator {
     return this.blockedToOpen_;
   }
 
-  private async waitOpenTrades(pair: string, trader: string, expectSome: boolean): Promise<Trade[]> {
+  private async waitOpenTrades(gTrade: GTrade, pair: string, trader: string, expectSome: boolean): Promise<Trade[]> {
     let trades = [];
     for (var i = 0; i < MAX_WAIT_RETRIES; i++) {
-      trades = await this.gtrade.getOpenTrades(pair, trader);
+      trades = await gTrade.getOpenTrades(pair, trader);
       log.info(`...${pair}::${shortPubkey(trader)}: got ${trades.length}, expectSome: ${expectSome}`);
       switch (trades.length) {
         case 0:

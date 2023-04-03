@@ -1,7 +1,7 @@
 import Web3 from "web3";
 import { Contract } from "web3-eth-contract";
 import { ChainSpec, Trade } from ".";
-import { CouldNotCloseTrade, Dir, MarketOrderInitiated, PriceReceived } from "../types";
+import { CouldNotCloseTrade, Dir, MarketOrderInitiated, OpenLimitPlaced, PriceReceived } from "../types";
 import { range, sleep } from "../utils";
 import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI, AGGREGATOR_PROXY_ABI } from "./abi";
 import { log } from "../log";
@@ -252,6 +252,24 @@ export class GTrade {
       .on("disconnected", async (subId) => log.warn("WS subscription MarketOrderInitiated disconnected", subId))
       .on("changed", async (event) => log.warn("WS subscription MarketOrderInitiated changed", event))
       .on("error", async (error, receipt) => log.warn("WS subscription MarketOrderInitiated error", error, receipt));
+  }
+
+  async subscribeOpenLimitPlaced(traderAddresses: string[], callback: (event: OpenLimitPlaced) => Promise<void>) {
+    const tradingContract = await this.getTradingContract();
+    tradingContract.events
+      .OpenLimitPlaced({ filter: { trader: traderAddresses } })
+      .on("data", async (data) => {
+        const event: OpenLimitPlaced = {
+          trader: data.returnValues.trader,
+          pairIndex: Number(+data.returnValues.pairIndex),
+          index: Number(+data.returnValues.index),
+        };
+        await callback(event);
+      })
+      .on("connected", async (subId) => log.warn("WS subscription OpenLimitPlaced connected", subId))
+      .on("disconnected", async (subId) => log.warn("WS subscription OpenLimitPlaced disconnected", subId))
+      .on("changed", async (event) => log.warn("WS subscription OpenLimitPlaced changed", event))
+      .on("error", async (error, receipt) => log.warn("WS subscription OpenLimitPlaced error", error, receipt));
   }
 
   async subscribeCouldNotCloseTrade(traderAddresses: string[], callback: (event: CouldNotCloseTrade) => Promise<void>) {

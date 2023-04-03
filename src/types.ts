@@ -9,6 +9,12 @@ export interface MarketOrderInitiated {
   open: boolean;
 }
 
+export interface OpenLimitPlaced {
+  trader: string;
+  pairIndex: number;
+  index: number;
+}
+
 export interface CouldNotCloseTrade {
   trader: string;
   pairIndex: number;

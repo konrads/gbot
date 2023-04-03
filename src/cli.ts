@@ -271,6 +271,27 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     },
   });
 
+  const subscribeOpenLimitPlaced = cmdts.command({
+    name: "subscribeOpenLimitPlaced",
+    args: {
+      addresses: cmdts.option({
+        type: cmdts.string,
+        long: "addresses",
+        defaultValue: () => null,
+      }),
+      sleepMs: SLEEP_MS,
+      chain: CHAIN,
+    },
+    handler: async ({ addresses, sleepMs, chain }) => {
+      const config = loadConfig();
+      const addressez = addresses ? addresses.split(",").map((x) => x.trim()) : [config.wallet.address, config.monitoredTrader];
+      log.info(`Monitoring trade events on pubkeys: ${addressez}`);
+      const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
+      await gtrade.subscribeOpenLimitPlaced(addressez, async (event) => console.log(`${new Date()}::event received ${JSON.stringify(event)}`));
+      await sleep(sleepMs);
+    },
+  });
+
   const subscribeAggregatorEvents = cmdts.command({
     name: "subscribeAggregatorEvents",
     args: {
@@ -363,6 +384,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       closeAllTrades,
       subscribeTradingEvents,
       subscribeAggregatorEvents,
+      subscribeOpenLimitPlaced,
       getPrice,
       perpetualOpenClose,
     },
