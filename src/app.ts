@@ -9,7 +9,7 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
-const INTERVAL_MS = 60 * 1000; // every 60 sec
+const INTERVAL_MS = 30 * 1000; // every 60 sec
 
 async function main() {
   const config = loadConfig();

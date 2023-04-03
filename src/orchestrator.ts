@@ -13,7 +13,7 @@ interface AssetState {
   trade?: LedgerTrade;
 }
 
-const MAX_WAIT_RETRIES = 20;
+const MAX_WAIT_RETRIES = 10;
 const WAIT_SLEEP_MS = 1000;
 
 export class Orchestrator {
