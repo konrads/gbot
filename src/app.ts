@@ -50,7 +50,7 @@ async function main() {
   schedule(async () => {
     try {
       const myTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p)))).flat();
-      const monitoredTrades = (await Promise.all(allAssets.map(async (p) => gtrader.getOpenTrades(p, config.monitoredTrader)))).flat();
+      const monitoredTrades = (await Promise.all(allAssets.map(async (p) => glistener.getOpenTrades(p, config.monitoredTrader)))).flat();
       await orchestrator.updateSnapshot(myTrades, monitoredTrades);
       await orchestrator.updateHealthCheck();
     } catch (e) {
