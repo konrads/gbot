@@ -15,9 +15,7 @@ export class Notifier {
     if (this.notificationsDetails?.telegramToken && this.notificationsDetails?.telegramChatId) {
       const resp = await fetch(`https://api.telegram.org/bot${this.notificationsDetails.telegramToken}/sendMessage`, {
         method: `POST`,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           chat_id: this.notificationsDetails.telegramChatId,
           text: msg,
