@@ -101,7 +101,7 @@ Adhere to following guidelines:
 
 - gbot operates on trades index 0 - expect it to be closed if opened manually. Ideally - do not open trades manually at all.
 - gbot triggers on periodic schedule and certain WS events. Note, to keep the logic simple, WS events cause the same update as per schedule
-- should WS block and not recover/error - gbot relies on periodic schedules only
+- should WS connection drop off and fail to recover - gbot will keep ticking on periodic schedules only
 - on restart following rules are abided by:
   - if both positions exist in same dir - noop
   - if my position exists but monitored doesn't - mine is closed (on trade 0)
