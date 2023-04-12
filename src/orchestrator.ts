@@ -51,7 +51,7 @@ export class Orchestrator {
   }
 
   // Presuming the monitoredTrades to be per-pair indications of position change
-  async updateSnapshot(monitoredTrades: Trade[]) {
+  async updateSnapshot(monitoredTrades: Trade[], origin: string) {
     // get my trades, compare to assetStates, generate {who, pair, dir, open }
     const allPairs = this.config.assetMappings.map((x) => x.asset);
     await this.mutex.runExclusive(async () => {
@@ -67,13 +67,15 @@ export class Orchestrator {
         .filter(([_, trade]) => Math.abs(trade.positionSizeDai * trade.leverage) < MIN_POSITION_SIZE)
         .map(([pair, _]) => pair);
       for (var pair of ignoredPairs) {
+        const msgId = `${pair}-${origin}`;
         const ignoredTrades = monitoredTrades.filter((t) => t.pair == pair);
-        log.debug(`${pair}: skipping trades as size * leverage < ${MIN_POSITION_SIZE}: ${JSON.stringify(ignoredTrades)}`);
+        log.debug(`${msgId}: skipping trades as size * leverage < ${MIN_POSITION_SIZE}: ${JSON.stringify(ignoredTrades)}`);
         monitoredTradeByPair.delete(pair);
       }
 
       // sync up the state
       for (var pair of allPairs) {
+        const msgId = `${pair}-${origin}`;
         const myTrade = myTradeByPair.get(pair);
         let state = this.assetStates.get(pair);
         if (!state) {
@@ -83,16 +85,16 @@ export class Orchestrator {
 
         if (myTrade && state.currTrade) {
           if ((myTrade.buy && state.currTrade.dir == "buy") || (!myTrade.buy && state.currTrade.dir == "sell")) {
-            log.debug(`${pair}: noop - matching myTrade and state`);
+            log.debug(`${msgId}: noop - matching myTrade and state`);
           } else {
-            log.warn(`${pair}: switching dir in state due to myTrade ${JSON.stringify(myTrade)}`);
+            log.warn(`${msgId}: switching dir in state due to myTrade ${JSON.stringify(myTrade)}`);
             state.currTrade.dir = myTrade.buy ? "buy" : "sell";
           }
         } else if (!myTrade && state.currTrade) {
-          log.warn(`${pair}: mismatch, have no myTrade, removing state ${JSON.stringify(state)}`);
+          log.warn(`${msgId}: mismatch, have no myTrade, removing state ${JSON.stringify(state)}`);
           state.currTrade = undefined;
         } else if (myTrade && !state.currTrade) {
-          log.warn(`${pair}: mismatch, have myTrade ${JSON.stringify(myTrade)}, fixing up state ${JSON.stringify(state)}`);
+          log.warn(`${msgId}: mismatch, have myTrade ${JSON.stringify(myTrade)}, fixing up state ${JSON.stringify(state)}`);
           state.currTrade = {
             dir: myTrade.buy ? "buy" : "sell",
             pair: pair,
@@ -107,39 +109,40 @@ export class Orchestrator {
       // sync up with monitoredTrades
       const events = allPairs
         .map((pair) => {
+          const msgId = `${pair}-${origin}`;
           const monitoredTrade = monitoredTradeByPair.get(pair);
           const state = this.assetStates.get(pair);
           if (!monitoredTrade && this._blockedToOpen.has(pair)) {
-            log.info(`${pair}: Unblocking`);
+            log.info(`${msgId}: Unblocking`);
             this._blockedToOpen.delete(pair);
           }
 
           if (monitoredTrade && state.currTrade) {
             if ((monitoredTrade.buy && state.currTrade.dir == "buy") || (!monitoredTrade.buy && state.currTrade.dir == "sell")) {
-              log.debug(`${pair}: noop - matching monitoredTrade and state`);
+              log.debug(`${msgId}: noop - matching monitoredTrade and state`);
             } else {
-              log.info(`${pair}: unexpected dir, closing myTrade`);
+              log.info(`${msgId}: unexpected dir, closing myTrade`);
               return { who: "monitored", pair, open: false };
             }
           } else if (!monitoredTrade && state.currTrade) {
-            log.info(`${pair}: monitoredTrade gone, closing myTrade`);
+            log.info(`${msgId}: monitoredTrade gone, closing myTrade`);
             return { pair, open: false };
           } else if (monitoredTrade && !state.currTrade) {
-            // log.info(`${pair}: following monitoredTrade ${JSON.stringify(monitoredTrade)}`);
+            // log.info(`${msgId}: following monitoredTrade ${JSON.stringify(monitoredTrade)}`);
             if (this._snapshotCnt == 0) {
-              log.info(`${pair}: blocking due to initial monitoredTrade ${JSON.stringify(monitoredTrade)}`);
+              log.info(`${msgId}: blocking due to initial monitoredTrade ${JSON.stringify(monitoredTrade)}`);
               this._blockedToOpen.add(pair);
             }
             return { pair, dir: (monitoredTrade.buy ? "buy" : "sell") as "buy" | "sell", open: true };
           }
         })
         .filter((x) => x);
-      if (events.length > 0) await Promise.all(events.map(async (x) => await this._handleEvent(x)));
+      if (events.length > 0) await Promise.all(events.map(async (x) => await this._handleEvent(x, origin)));
       this._snapshotCnt += 1;
     });
   }
 
-  private async _handleEvent(event: { pair: string; dir?: Dir; open: boolean }) {
+  private async _handleEvent(event: { pair: string; dir?: Dir; open: boolean }, origin: string) {
     const configAsset = this.config.assetMappings.find((x) => x.asset == event.pair);
     if (!configAsset) log.debug(`...Ignoring unsupported event pair ${event.pair}`);
     else {
@@ -150,7 +153,7 @@ export class Orchestrator {
       }
 
       const status = state.currTrade ? "open" : "idle";
-      const msgId = `${event.pair}-${status}`;
+      const msgId = `${event.pair}-${status}-${origin}`;
       const now = new Date();
 
       switch (status) {

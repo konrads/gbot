@@ -50,7 +50,7 @@ async function main() {
     try {
       log.debug(`Schedule triggered ${orchestrator.snapshotCnt}`);
       const monitoredTrades = (await Promise.all(allPairs.map(async (pair) => await glistener.getOpenTrades(pair, config.monitoredTrader)))).flat();
-      await orchestrator.updateSnapshot(monitoredTrades);
+      await orchestrator.updateSnapshot(monitoredTrades, "sc"); // sc == scheduled
       await orchestrator.updateHealthCheck();
     } catch (e) {
       die(`snapshot error ${translateError(e.stack)}`);
@@ -66,7 +66,7 @@ async function main() {
       log.debug(`WS event triggered ${JSON.stringify(event)}, will update after ${WS_UPDATE_DELAY_MS}ms`);
       await sleep(WS_UPDATE_DELAY_MS);
       const monitoredTrades = (await Promise.all(allPairs.map(async (pair) => await glistener.getOpenTrades(pair, config.monitoredTrader)))).flat();
-      await orchestrator.updateSnapshot(monitoredTrades);
+      await orchestrator.updateSnapshot(monitoredTrades, "ws");
     } else log.debug(`Listener received unsupported event ${JSON.stringify(event)}`);
   });
 
