@@ -2,7 +2,7 @@ import Web3 from "web3";
 import { Contract } from "web3-eth-contract";
 import { ChainSpec, Trade } from ".";
 import { CouldNotCloseTrade, Dir, MarketOrderInitiated, OpenLimitPlaced, PriceReceived } from "../types";
-import { range, sleep } from "../utils";
+import { range, translateError } from "../utils";
 import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI, AGGREGATOR_PROXY_ABI } from "./abi";
 import { log } from "../log";
 
@@ -85,26 +85,27 @@ export class GTrade {
     return new Map(cnts);
   }
 
-  async getOpenTrades(pair: string, trader?: string, cnt?: number): Promise<Trade[]> {
+  async getOpenTrades(pair: string, trader?: string): Promise<Trade[]> {
     trader = trader ?? this.wallet.address;
-    cnt = cnt ?? (await this.getOpenTradeCount(pair, trader));
     const pairIndex = this.chainSpec.pairs.find((x) => x.pair == pair).index;
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
-    const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.methods.openTrades(trader, pairIndex, i).call()));
-    const asTrades = res.map((x) => {
-      return {
-        trader: x.trader,
-        pair,
-        index: Number(x.index),
-        initialPosToken: Number(x.initialPosToken) / 10 ** 18,
-        positionSizeDai: Number(x.positionSizeDai) / 10 ** 18,
-        openPrice: Number(x.openPrice) / 10 ** 10,
-        buy: x.buy,
-        leverage: Number(x.leverage),
-        tp: Number(x.tp) / 10 ** 10, // FIXME: revisit, seems wrong
-        sl: Number(x.sl) / 10 ** 10, // FIXME: revisit, seems wrong
-      };
-    });
+    const res = await Promise.all([0, 1, 2].map(async (i) => await this.storageContract.methods.openTrades(trader, pairIndex, i).call()));
+    const asTrades = res
+      .filter((x) => x.trader != "0x0000000000000000000000000000000000000000")
+      .map((x) => {
+        return {
+          trader: x.trader,
+          pair,
+          index: Number(x.index),
+          initialPosToken: Number(x.initialPosToken) / 10 ** 18,
+          positionSizeDai: Number(x.positionSizeDai) / 10 ** 18,
+          openPrice: Number(x.openPrice) / 10 ** 10,
+          buy: x.buy,
+          leverage: Number(x.leverage),
+          tp: Number(x.tp) / 10 ** 10, // FIXME: revisit, seems wrong
+          sl: Number(x.sl) / 10 ** 10, // FIXME: revisit, seems wrong
+        };
+      });
     return asTrades;
   }
 
@@ -115,16 +116,18 @@ export class GTrade {
     const pairIndex = this.chainSpec.pairs.find((x) => x.pair == pair).index;
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     const res = await Promise.all(range(cnt).map(async (i) => await this.storageContract.methods.openTradesInfo(trader, pairIndex, i).call()));
-    const asInfos = res.map((x) => {
-      return {
-        tokenId: Number(x.tokenId),
-        tokenPriceDai: Number(x.tokenPriceDai) / 10 ** 10,
-        openInterestDai: Number(x.openInterestDai) / 10 ** 18,
-        tpLastUpdated: Number(x.tpLastUpdated) / 10 ** 10,
-        slLastUpdated: Number(x.slLastUpdated) / 10 ** 10,
-        beingMarketClosed: Number(x.beingMarketClosed) / 10 ** 10,
-      };
-    });
+    const asInfos = res
+      .filter((x) => x.trader != "0x0000000000000000000000000000000000000000")
+      .map((x) => {
+        return {
+          tokenId: Number(x.tokenId),
+          tokenPriceDai: Number(x.tokenPriceDai) / 10 ** 10,
+          openInterestDai: Number(x.openInterestDai) / 10 ** 18,
+          tpLastUpdated: Number(x.tpLastUpdated) / 10 ** 10,
+          slLastUpdated: Number(x.slLastUpdated) / 10 ** 10,
+          beingMarketClosed: Number(x.beingMarketClosed) / 10 ** 10,
+        };
+      });
     return asInfos;
   }
 
@@ -141,14 +144,14 @@ export class GTrade {
   async issueMarketTrade(
     pair: string,
     size: number,
+    oraclePrice: number,
     leverage: number,
     dir: Dir,
+    tradeIndex: number,
     takeProfit?: number,
     stopLoss?: number,
-    tradeIndex: number = 0,
-    slippage: number = 0.01
-  ): Promise<[number, any]> {
-    const oraclePrice = await this.getOraclePrice(pair);
+    slippage: number = 0.05
+  ): Promise<any> {
     let price: number;
     switch (dir) {
       case "buy":
@@ -160,7 +163,7 @@ export class GTrade {
       default:
         throw new Error(`Invalid dir ${dir}`);
     }
-    return [oraclePrice, await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage)];
+    return await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage);
   }
 
   async issueTrade(
@@ -201,38 +204,32 @@ export class GTrade {
     };
 
     const tradingContract = await this.getTradingContract();
-    let gasLimit = await tradingContract.methods.openTrade(order, orderType, spreadReductionId, slippage, this.referrer).estimateGas({
-      from: this.wallet.address,
-      value: 0,
-    });
-    const res = await tradingContract.methods.openTrade(order, orderType, spreadReductionId, slippage, this.referrer).send({ gasLimit: gasLimit });
+    const res = await sendTxnWithRetry(
+      tradingContract.methods.openTrade(order, orderType, spreadReductionId, slippage, this.referrer),
+      this.wallet.address,
+      `issueTrade { pair: ${pair}, dir: ${dir}, price: ${price}, size: ${size}, leverage: ${leverage}}}`
+    );
     return res.transactionHash;
   }
 
   // Sequential close of all trades, tried in parallel and was getting TRANSACTION_REPLACED errors
-  async closeAllTrades(): Promise<Map<string, number>> {
-    const counts = await this.getOpenTradeCounts();
-    const nonZeroCounts = [...counts.entries()].filter(([_, v]) => v != 0);
-    for (var [pair, count] of nonZeroCounts) {
-      for (var i = count - 1; i >= 0; i--) {
-        await this.closeTrade(pair, i);
-        await sleep(1000);
-      }
+  async closeAllTrades(pair: string) {
+    const trades = await this.getOpenTrades(pair);
+    for (var t of trades) {
+      await this.closeTrade(pair, t.index);
     }
-    return new Map(nonZeroCounts);
   }
 
-  async closeTrade(pair: string, tradeIndex: number = 0): Promise<[number, any]> {
+  async closeTrade(pair: string, tradeIndex: number): Promise<any> {
     const pairIndex = this.chainSpec.pairs.find((x) => x.pair == pair).index;
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);
     const tradingContract = await this.getTradingContract();
-    const gasLimit = await tradingContract.methods.closeTradeMarket(pairIndex, tradeIndex).estimateGas({
-      from: this.wallet.address,
-      value: 0,
-    });
-    const res = await tradingContract.methods.closeTradeMarket(pairIndex, tradeIndex).send({ gasLimit: gasLimit });
-    const oraclePrice = await this.getOraclePrice(pair);
-    return [oraclePrice, res.transactionHash];
+    const res = await sendTxnWithRetry(
+      tradingContract.methods.closeTradeMarket(pairIndex, tradeIndex),
+      this.wallet.address,
+      `closeTrade { pair: ${pair}, tradeIndex: ${tradeIndex}}}`
+    );
+    return res.transactionHash;
   }
 
   async subscribeMarketOrderInitiated(traderAddresses: string[], callback: (event: MarketOrderInitiated) => Promise<void>) {
@@ -248,7 +245,7 @@ export class GTrade {
         };
         await callback(event);
       })
-      .on("connected", async (subId) => log.warn("WS subscription MarketOrderInitiated connected", subId))
+      .on("connected", async (subId) => log.info("WS subscription MarketOrderInitiated connected", subId))
       .on("disconnected", async (subId) => log.warn("WS subscription MarketOrderInitiated disconnected", subId))
       .on("changed", async (event) => log.warn("WS subscription MarketOrderInitiated changed", event))
       .on("error", async (error, receipt) => log.warn("WS subscription MarketOrderInitiated error", error, receipt));
@@ -266,7 +263,7 @@ export class GTrade {
         };
         await callback(event);
       })
-      .on("connected", async (subId) => log.warn("WS subscription OpenLimitPlaced connected", subId))
+      .on("connected", async (subId) => log.info("WS subscription OpenLimitPlaced connected", subId))
       .on("disconnected", async (subId) => log.warn("WS subscription OpenLimitPlaced disconnected", subId))
       .on("changed", async (event) => log.warn("WS subscription OpenLimitPlaced changed", event))
       .on("error", async (error, receipt) => log.warn("WS subscription OpenLimitPlaced error", error, receipt));
@@ -284,7 +281,7 @@ export class GTrade {
         };
         await callback(event);
       })
-      .on("connected", async (subId) => log.warn("WS subscription CouldNotCloseTrade connected", subId))
+      .on("connected", async (subId) => log.info("WS subscription CouldNotCloseTrade connected", subId))
       .on("disconnected", async (subId) => log.warn("WS subscription CouldNotCloseTrade disconnected", subId))
       .on("changed", async (event) => log.warn("WS subscription CouldNotCloseTrade changed", event))
       .on("error", async (error, receipt) => log.warn("WS subscription CouldNotCloseTrade error", error, receipt));
@@ -312,4 +309,18 @@ export class GTrade {
       .on("changed", async (event) => log.warn("WS subscription PriceReceived changed", event))
       .on("error", async (error, receipt) => log.warn("WS subscription PriceReceived error", error, "receipt", receipt));
   }
+}
+
+async function sendTxnWithRetry(txn, address: string, description: string) {
+  const gasLimit = await txn.estimateGas({ from: address, value: 0 });
+  let error;
+  for (var multiplier of [1, 1.3, 1.5, 1.7, 1.9]) {
+    try {
+      return await txn.send({ gasLimit: Math.round(gasLimit * multiplier) });
+    } catch (e) {
+      log.warn(`${description} failed with gasLimit ${gasLimit}, multiplier ${multiplier}, error ${translateError(e)}`);
+      error = e;
+    }
+  }
+  throw error;
 }

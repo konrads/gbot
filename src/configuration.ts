@@ -16,16 +16,11 @@ export interface AssetMapping {
 export interface Config {
   traderChainSpec: "polygon" | "arbitrum" | "mumbai";
   listenerChainSpec: "polygon" | "arbitrum" | "mumbai";
-  mockParams?: MockParams;
   webServerPort: number;
   notifications?: Notifications;
   assetMappings: AssetMapping[];
   monitoredTrader: string;
   wallet: Wallet;
-}
-
-export interface MockParams {
-  bogusTrader: string;
 }
 
 export function loadConfig(): Config {

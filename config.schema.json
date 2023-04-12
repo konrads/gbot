@@ -4,7 +4,6 @@
   "properties": {
     "traderChainSpec": {"$ref": "#/definitions/ChainSpec"},
     "listenerChainSpec": {"$ref": "#/definitions/ChainSpec"},
-    "mockParams": {"$ref": "#/definitions/MockParams"},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
     "assetMappings": {
@@ -32,13 +31,6 @@
         "leverage": {"type": "number", "minimum": 0}
       },
       "required": ["asset", "cashAmount", "leverage"]
-    },
-    "MockParams": {
-      "type": "object",
-      "properties": {
-        "bogusTrader": {"type": "string"}
-      },
-      "required": ["bogusTrader"]
     },
     "ChainSpec": {
       "type": "string",

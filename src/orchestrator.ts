@@ -2,25 +2,24 @@
 
 import { Config } from "./configuration";
 import { log } from "./log";
-import { LedgerTrade, MarketOrderInitiated } from "./types";
+import { Dir, LedgerTrade } from "./types";
 import { Mutex } from "async-mutex";
 import { GTrade, Trade } from "./gtrade";
-import { shortPubkey, sleep, toFixed } from "./utils";
+import { aggregateTrades, groupBy, sleep, toFixed } from "./utils";
 import { Notifier } from "./notifications";
 
 interface AssetState {
-  status: "idle" | "open";
-  trade?: LedgerTrade;
+  currTrade?: LedgerTrade;
 }
 
 const MAX_WAIT_RETRIES = 10;
 const WAIT_SLEEP_MS = 1000;
+const MIN_POSITION_SIZE = 900;
 
 export class Orchestrator {
   private readonly assetStates: Map<string, AssetState> = new Map();
   private readonly config: Config;
   private readonly gtrader: GTrade;
-  private readonly glistener: GTrade;
   private readonly notifier: Notifier;
   private readonly mutex: Mutex = new Mutex();
   private readonly closedTrades: LedgerTrade[] = [];
@@ -28,221 +27,214 @@ export class Orchestrator {
   // blockedToOpen criteria:
   // - snapshot suggests to open AND (snapshotCnt == 0 OR already blocked) -> blocked ... ie. potentially opened a while ago?
   // - else -> unblocked
-  private blockedToOpen_: Set<string> = new Set();
-  private snapshotCnt_ = 0;
-  private healthCheck_: string = "--";
-  private healthCheckCnt_ = 0;
+  private _blockedToOpen: Set<string> = new Set();
+  private _snapshotCnt = 0;
+  private _healthCheck: string = "--";
+  private _healthCheckCnt = 0;
 
-  constructor(config: Config, gtrader: GTrade, glistener: GTrade, notifier: Notifier) {
+  constructor(config: Config, gtrader: GTrade, notifier: Notifier) {
     this.config = config;
     this.gtrader = gtrader;
-    this.glistener = glistener;
     this.notifier = notifier;
   }
 
   async updateHealthCheck(): Promise<void> {
-    this.healthCheckCnt_ += 1;
-    this.healthCheck_ = `${this.healthCheckCnt_}, eth/matic: ${toFixed(await this.gtrader.getBalance(), 4)} dai: ${toFixed(
+    this._healthCheckCnt += 1;
+    this._healthCheck = `${this._healthCheckCnt}, eth/matic: ${toFixed(await this.gtrader.getBalance(), 4)} dai: ${toFixed(
       await this.gtrader.getDaiBalance(),
       2
     )} openTrades: ${[...(await this.gtrader.getOpenTradeCounts()).entries()].map(([k, v]) => `${k}:${v}`)}`;
   }
 
   get healthCheck(): string {
-    return this.healthCheck_;
+    return this._healthCheck;
   }
 
-  async updateSnapshot(myTrades: Trade[], monitoredTrades: Trade[]) {
-    const myTradeByPair: Map<string, Trade> = new Map(myTrades.filter(({ index }) => index == 0).map((trade): [string, Trade] => [trade.pair, trade]));
-    const monitoredTradeByPair: Map<string, Trade> = new Map(
-      monitoredTrades.filter(({ index }) => index == 0).map((trade): [string, Trade] => [trade.pair, trade])
-    );
-
+  // Presuming the monitoredTrades to be per-pair indications of position change
+  async updateSnapshot(monitoredTrades: Trade[]) {
+    // get my trades, compare to assetStates, generate {who, pair, dir, open }
     const allPairs = this.config.assetMappings.map((x) => x.asset);
-    this.snapshotCnt_ += 1;
-    log.debug(
-      `Snapshot: cnt ${this.snapshotCnt_}, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen_))} myTrades: ${JSON.stringify(
-        myTrades
-      )}, monitoredTrades: ${JSON.stringify(monitoredTrades)}, assetStates: ${JSON.stringify(this.assetStates)}`
-    );
-    const effects: MarketOrderInitiated[] = allPairs
-      .map((pair) => {
+    await this.mutex.runExclusive(async () => {
+      // work with trades with lowest index per pair
+      const myTrades = (await Promise.all(allPairs.map(async (p) => (await this.gtrader.getOpenTrades(p)).filter(({ index }) => index == 0)))).flat();
+      const myTradeByPair = new Map(myTrades.map((trade): [string, Trade] => [trade.pair, trade]));
+
+      // sum up position size in monitoredTrades, ignoring trades under a limit in size * leverage (in case there's a short and long cancelling each other out)
+      const monitoredTradeByPair = new Map(groupBy(monitoredTrades, (x) => x.pair).map(([pair, trades]): [string, Trade] => [pair, aggregateTrades(trades)]));
+      log.debug(`Monitored trades: ${JSON.stringify([...monitoredTradeByPair.entries()])}`);
+      log.debug(`My trades: ${JSON.stringify([...myTradeByPair.entries()])}`);
+      const ignoredPairs = [...monitoredTradeByPair.entries()]
+        .filter(([_, trade]) => Math.abs(trade.positionSizeDai * trade.leverage) < MIN_POSITION_SIZE)
+        .map(([pair, _]) => pair);
+      for (var pair of ignoredPairs) {
+        const ignoredTrades = monitoredTrades.filter((t) => t.pair == pair);
+        log.debug(`${pair}: skipping trades as size * leverage < ${MIN_POSITION_SIZE}: ${JSON.stringify(ignoredTrades)}`);
+        monitoredTradeByPair.delete(pair);
+      }
+
+      // sync up the state
+      for (var pair of allPairs) {
         const myTrade = myTradeByPair.get(pair);
-        const monitoredTrade = monitoredTradeByPair.get(pair);
-        let assetState = this.assetStates.get(pair);
-
-        if (myTrade || monitoredTrade || assetState) {
-          // update assetState first
-          const myTradeDir: "buy" | "sell" = !myTrade ? undefined : myTrade?.buy ? "buy" : "sell";
-          if (myTrade && assetState?.trade?.dir != myTradeDir) {
-            const newAssetState = {
-              status: "open" as any,
-              trade: {
-                pair: myTrade.pair,
-                dir: myTradeDir,
-                size: myTrade.positionSizeDai,
-                leverage: myTrade.leverage,
-                openPrice: myTrade.openPrice,
-                openTs: assetState?.trade?.openTs ?? new Date(),
-              },
-            };
-            this.assetStates.set(myTrade.pair, newAssetState);
-            log.info(`Snapshot: ${pair}, overwriting ${JSON.stringify(assetState)} => ${JSON.stringify(newAssetState)}`);
-            assetState = newAssetState;
-          } else if (!myTrade) {
-            this.assetStates.delete(pair);
-          }
+        let state = this.assetStates.get(pair);
+        if (!state) {
+          state = {};
+          this.assetStates.set(pair, state);
         }
 
-        if (monitoredTrade && (assetState?.status ?? "idle") == "idle") {
-          // missed open
-          if (this.snapshotCnt_ == 1) this.blockedToOpen_.add(pair);
-          if (!this.blockedToOpen_.has(pair)) {
-            return {
-              orderId: -111,
-              trader: this.config.monitoredTrader,
-              pair,
-              open: true,
-            };
+        if (myTrade && state.currTrade) {
+          if ((myTrade.buy && state.currTrade.dir == "buy") || (!myTrade.buy && state.currTrade.dir == "sell")) {
+            log.debug(`${pair}: noop - matching myTrade and state`);
+          } else {
+            log.warn(`${pair}: switching dir in state due to myTrade ${JSON.stringify(myTrade)}`);
+            state.currTrade.dir = myTrade.buy ? "buy" : "sell";
           }
-        } else if (monitoredTrade && assetState?.status == "open") {
-          const monitoredTradeDir: "buy" | "sell" = monitoredTrade.buy ? "buy" : "sell";
-          if (assetState?.trade?.dir != monitoredTradeDir) {
-            // have wrong dir, close
-            if (this.snapshotCnt_ == 1) this.blockedToOpen_.add(pair);
-            return {
-              orderId: -222,
-              trader: this.config.monitoredTrader,
-              pair,
-              open: false,
-            };
-          }
-        } else {
-          this.blockedToOpen_.delete(pair);
-          if (!monitoredTrade && assetState?.status == "open")
-            return {
-              orderId: -333,
-              trader: this.config.monitoredTrader,
-              pair,
-              open: false,
-            };
+        } else if (!myTrade && state.currTrade) {
+          log.warn(`${pair}: mismatch, have no myTrade, removing state ${JSON.stringify(state)}`);
+          state.currTrade = undefined;
+        } else if (myTrade && !state.currTrade) {
+          log.warn(`${pair}: mismatch, have myTrade ${JSON.stringify(myTrade)}, fixing up state ${JSON.stringify(state)}`);
+          state.currTrade = {
+            dir: myTrade.buy ? "buy" : "sell",
+            pair: pair,
+            size: myTrade.positionSizeDai,
+            leverage: myTrade.leverage,
+            openPrice: myTrade.openPrice,
+            openTs: new Date(),
+          };
         }
-      })
-      .filter((x) => x);
-    if (effects.length == 0) log.debug(`Snapshot: Issuing no trades, blockedToOpen: ${JSON.stringify(Array.from(this.blockedToOpen_))}`);
-    else
-      log.info(
-        `Snapshot: Issuing trades: ${effects.map((x) => `${x.pair} => ${x.open ? "open" : "close"}`).join(", ")}, blockedToOpen: ${JSON.stringify(
-          Array.from(this.blockedToOpen_)
-        )}`
-      );
-    await Promise.all(effects.map(async (x) => this.handleMonitoredEvent(x)));
+      }
+
+      // sync up with monitoredTrades
+      const events = allPairs
+        .map((pair) => {
+          const monitoredTrade = monitoredTradeByPair.get(pair);
+          const state = this.assetStates.get(pair);
+          if (!monitoredTrade && this._blockedToOpen.has(pair)) {
+            log.info(`${pair}: Unblocking`);
+            this._blockedToOpen.delete(pair);
+          }
+
+          if (monitoredTrade && state.currTrade) {
+            if ((monitoredTrade.buy && state.currTrade.dir == "buy") || (!monitoredTrade.buy && state.currTrade.dir == "sell")) {
+              log.debug(`${pair}: noop - matching monitoredTrade and state`);
+            } else {
+              log.info(`${pair}: unexpected dir, closing myTrade`);
+              return { who: "monitored", pair, open: false };
+            }
+          } else if (!monitoredTrade && state.currTrade) {
+            log.info(`${pair}: monitoredTrade gone, closing myTrade`);
+            return { pair, open: false };
+          } else if (monitoredTrade && !state.currTrade) {
+            // log.info(`${pair}: following monitoredTrade ${JSON.stringify(monitoredTrade)}`);
+            if (this._snapshotCnt == 0) {
+              log.info(`${pair}: blocking due to initial monitoredTrade ${JSON.stringify(monitoredTrade)}`);
+              this._blockedToOpen.add(pair);
+            }
+            return { pair, dir: (monitoredTrade.buy ? "buy" : "sell") as "buy" | "sell", open: true };
+          }
+        })
+        .filter((x) => x);
+      if (events.length > 0) await Promise.all(events.map(async (x) => await this._handleEvent(x)));
+      this._snapshotCnt += 1;
+    });
   }
 
-  async handleMonitoredEvent(event: MarketOrderInitiated) {
+  async handleEvent(event: { pair: string; dir?: Dir; open: boolean }) {
+    return await this.mutex.runExclusive(async () => await this._handleEvent(event));
+  }
+
+  private async _handleEvent(event: { pair: string; dir?: Dir; open: boolean }) {
     const configAsset = this.config.assetMappings.find((x) => x.asset == event.pair);
     if (!configAsset) log.debug(`...Ignoring unsupported event pair ${event.pair}`);
-    else
-      return await this.mutex.runExclusive(async () => {
-        let state = this.assetStates.get(event.pair);
-        if (!state) {
-          state = {
-            status: "idle",
-          };
-          this.assetStates.set(event.pair, state);
-        }
+    else {
+      let state = this.assetStates.get(event.pair);
+      if (!state) {
+        state = {};
+        this.assetStates.set(event.pair, state);
+      }
 
-        switch (state.status) {
-          case "idle":
-            if (event.open) {
-              log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
-              const monitoredTrades = await this.waitOpenTrades(this.glistener, event.pair, event.trader, true);
-              if (monitoredTrades.length == 0)
-                log.info(`${state.status}-${event.pair}: Not seeing any open trades for trader ${shortPubkey(event.trader)}, staying idle`);
+      const status = state.currTrade ? "open" : "idle";
+      const msgId = `${event.pair}-${status}`;
+      const now = new Date();
+
+      switch (status) {
+        case "idle":
+          if (event.open) {
+            if (this._blockedToOpen.has(event.pair)) log.info(`${msgId}: skipping blocked open event ${JSON.stringify(event)}`);
+            else {
+              log.info(`${msgId}: Following monitored event ${JSON.stringify(event)}`);
+              const oraclePrice = await this.gtrader.getOraclePrice(event.pair);
+              await this.gtrader.issueMarketTrade(event.pair, configAsset.cashAmount, oraclePrice, configAsset.leverage, event.dir, 0);
+              this.prices.set(event.pair, { price: oraclePrice, ts: now });
+              log.info(`${msgId}: Issued opened trade @ ${oraclePrice}`);
+              const myTrade = await this.waitOpenTrade(this.gtrader, event.pair, this.config.wallet.address, true);
+              log.info(`${msgId}: Found ${myTrade != undefined} confirmed trades`);
+              if (!myTrade) log.warn(`${msgId}: Failed to obtain a monitored trade, presuming trade was rejected`);
               else {
-                const firstTrade = monitoredTrades.find((x) => x.index == 0);
-                const dir = firstTrade.buy ? "buy" : "sell";
-                const [openPrice] = await this.gtrader.issueMarketTrade(firstTrade.pair, configAsset.cashAmount, configAsset.leverage, dir);
-                const now = new Date();
-                this.prices.set(event.pair, { price: openPrice, ts: now });
-                log.info(`${state.status}-${event.pair}: Issued opened trade @ ${openPrice}`);
-                const myTrades = await this.waitOpenTrades(this.gtrader, event.pair, this.config.wallet.address, true);
-                log.info(`${state.status}-${event.pair}: Found ${myTrades.length} confirmed trades`);
-                if (myTrades.length == 0) log.warn(`${state.status}-${event.pair}: Failed to obtain a monitored trade, presuming trade was rejected`);
-                else {
-                  const latestMyTrade = myTrades[myTrades.length - 1];
-                  state.trade = {
-                    dir: latestMyTrade.buy ? "buy" : "sell",
-                    pair: event.pair,
-                    size: configAsset.cashAmount,
-                    leverage: configAsset.leverage,
-                    openPrice: openPrice,
-                    openTs: now,
-                  };
-                  this.notifier?.publish(`${state.status}-${event.pair}: Opened ${dir} of ${configAsset.cashAmount} @ $${openPrice}`);
-                  state.status = "open";
-                  log.info(`${state.status}-${event.pair}: Monitored order duplicated`);
-                }
+                state.currTrade = {
+                  dir: myTrade.buy ? "buy" : "sell",
+                  pair: event.pair,
+                  size: configAsset.cashAmount,
+                  leverage: configAsset.leverage,
+                  openPrice: oraclePrice,
+                  openTs: now,
+                };
+                this.notifier.publish(`${msgId}: Opened ${event.dir} of ${configAsset.cashAmount} @ $${oraclePrice}`);
+                log.info(`${msgId}: Monitored order mirrored`);
               }
-            } else log.info(`${state.status}-${event.pair}: Ignoring event close from ${shortPubkey(event.trader)}`);
-            break;
-          case "open":
-            if (!event.open) {
-              log.info(`${state.status}-${event.pair}: Following monitored event ${JSON.stringify(event)}`);
-              // NOTE: not validating a monitored trade was actually closed
-              const [closePrice] = await this.gtrader.closeTrade(event.pair);
-              this.prices.set(event.pair, { price: closePrice, ts: new Date() });
-              const myTrades = await this.waitOpenTrades(this.glistener, event.pair, this.config.wallet.address, false);
-              if (myTrades.length == 0) {
-                const now = new Date();
-                state.trade.closePrice = closePrice;
-                state.trade.closeTs = now;
-                this.closedTrades.push(state.trade);
-                this.assetStates.set(event.pair, { status: "idle" });
-                this.notifier?.publish(
-                  `${state.status}-${event.pair}: Closed ${state.trade.dir} of ${state.trade.size} @ $${state.trade.openPrice} - $${state.trade.closePrice}`
-                );
-              } else throw new Error(`${state.status}-${event.pair}: Failed to close!`);
-            } else log.info(`${state.status}-${event.pair}: Ignoring event ${JSON.stringify(event)}`);
-            break;
-          default:
-            throw new Error(`Unknown state ${state.status}`);
-        }
-      });
+            }
+          } else log.info(`${msgId}: Ignoring event close from ${this.config.monitoredTrader}`);
+          break;
+        case "open":
+          if (!event.open) {
+            log.info(`${msgId}: Following monitored event ${JSON.stringify(event)}`);
+            if (this._blockedToOpen.has(event.pair)) {
+              this._blockedToOpen.delete(event.pair);
+              log.info(`${msgId}: unblocked`);
+            }
+            await this.gtrader.closeTrade(event.pair, 0);
+            const oraclePrice = await this.gtrader.getOraclePrice(event.pair);
+            this.prices.set(event.pair, { price: oraclePrice, ts: new Date() });
+            const myTrade = await this.waitOpenTrade(this.gtrader, event.pair, this.config.wallet.address, false);
+            if (!myTrade) {
+              state.currTrade.closePrice = oraclePrice;
+              state.currTrade.closeTs = now;
+              this.closedTrades.push({ ...state.currTrade });
+              this.notifier.publish(
+                `${msgId}: Closed ${state.currTrade.dir} of ${state.currTrade.size} @ $${state.currTrade.openPrice} - $${state.currTrade.closePrice}`
+              );
+              this.assetStates.set(event.pair, {});
+            } else throw new Error(`${msgId}: Failed to close!`);
+          } else log.info(`${msgId}: Ignoring event ${JSON.stringify(event)}`);
+          break;
+      }
+    }
   }
 
   get myClosedTrades(): LedgerTrade[] {
     return this.closedTrades;
   }
 
-  get assetPrices(): Map<string, { price: number; ts: Date }> {
+  get pairPrices(): Map<string, { price: number; ts: Date }> {
     return this.prices;
   }
 
   get snapshotCnt(): number {
-    return this.snapshotCnt_;
+    return this._snapshotCnt;
   }
 
   get blockedToOpen(): Set<string> {
-    return this.blockedToOpen_;
+    return this._blockedToOpen;
   }
 
-  private async waitOpenTrades(gTrade: GTrade, pair: string, trader: string, expectSome: boolean): Promise<Trade[]> {
-    let trades = [];
+  private async waitOpenTrade(gTrade: GTrade, pair: string, trader: string, expectExist: boolean): Promise<Trade> {
+    let trade0: Trade;
     for (var i = 0; i < MAX_WAIT_RETRIES; i++) {
-      trades = await gTrade.getOpenTrades(pair, trader);
-      log.info(`...${pair}::${shortPubkey(trader)}: got ${trades.length}, expectSome: ${expectSome}`);
-      switch (trades.length) {
-        case 0:
-          if (expectSome) await sleep(WAIT_SLEEP_MS);
-          else return trades;
-          break;
-        default:
-          if (expectSome) return trades;
-          else await sleep(WAIT_SLEEP_MS);
-          break;
-      }
+      trade0 = (await gTrade.getOpenTrades(pair, trader)).find((t) => t.index == 0);
+      log.info(`...${pair}::${trader}: got trade ${trade0 != undefined}, expectSome: ${expectExist}`);
+      if ((trade0 && expectExist) || (!trade0 && !expectExist)) return trade0;
+      else await sleep(WAIT_SLEEP_MS);
     }
-    return trades;
+    return trade0;
   }
 }

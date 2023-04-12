@@ -32,9 +32,9 @@ export function startExpress(config: Config, orchestrator: Orchestrator) {
       monitoredPubkey: config.monitoredTrader,
       pnl,
 
-      assets: [...orchestrator.assetPrices.entries()].map(([asset, { price, ts }]) => {
+      pairs: [...orchestrator.pairPrices.entries()].map(([pair, { price, ts }]) => {
         return {
-          asset,
+          pair,
           price: toFixed(price, 2),
           ts: ts.toLocaleString(),
         };

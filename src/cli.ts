@@ -213,8 +213,9 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const config = loadConfig();
       console.log(`Issuing trade as ${config.wallet.address}`);
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
-      const [openPrice, receipt] = await gtrade.issueMarketTrade(pair, size, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
-      log.info(`issueMarketTrade status ${receipt.status}, hash ${receipt.transactionHash}, openPrice ${openPrice}`);
+      const oraclePrice = await gtrade.getOraclePrice(pair);
+      const receipt = await gtrade.issueMarketTrade(pair, size, oraclePrice, leverage, dir as "buy" | "sell", orderIndex, takeProfit, stopLoss, slippage);
+      log.info(`issueMarketTrade status ${receipt.status}, hash ${receipt.transactionHash}, openPrice ${oraclePrice}`);
     },
   });
 
@@ -241,12 +242,13 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
     name: "closeAllTrades",
     args: {
       chain: CHAIN,
+      pair: PAIR,
     },
-    handler: async ({ chain }) => {
+    handler: async ({ chain, pair }) => {
       const config = loadConfig();
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
-      const closedTrades = await gtrade.closeAllTrades();
-      log.info(`send close to trades: ${JSON.stringify([...closedTrades.entries()])}`);
+      await gtrade.closeAllTrades(pair);
+      await sleep(1000);
     },
   });
 
@@ -266,28 +268,13 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const addressez = addresses ? addresses.split(",").map((x) => x.trim()) : [config.wallet.address, config.monitoredTrader];
       log.info(`Monitoring trade events on pubkeys: ${addressez}`);
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
-      await gtrade.subscribeMarketOrderInitiated(addressez, async (event) => console.log(`${new Date()}::event received ${JSON.stringify(event)}`));
-      await sleep(sleepMs);
-    },
-  });
-
-  const subscribeOpenLimitPlaced = cmdts.command({
-    name: "subscribeOpenLimitPlaced",
-    args: {
-      addresses: cmdts.option({
-        type: cmdts.string,
-        long: "addresses",
-        defaultValue: () => null,
-      }),
-      sleepMs: SLEEP_MS,
-      chain: CHAIN,
-    },
-    handler: async ({ addresses, sleepMs, chain }) => {
-      const config = loadConfig();
-      const addressez = addresses ? addresses.split(",").map((x) => x.trim()) : [config.wallet.address, config.monitoredTrader];
-      log.info(`Monitoring trade events on pubkeys: ${addressez}`);
-      const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
-      await gtrade.subscribeOpenLimitPlaced(addressez, async (event) => console.log(`${new Date()}::event received ${JSON.stringify(event)}`));
+      await gtrade.subscribeMarketOrderInitiated(addressez, async (event) =>
+        console.log(`${new Date()}::MarketOrderInitiated event received ${JSON.stringify(event)}`)
+      );
+      await gtrade.subscribeCouldNotCloseTrade(addressez, async (event) =>
+        console.log(`${new Date()}::CouldNotCloseTrade event received ${JSON.stringify(event)}`)
+      );
+      await gtrade.subscribeOpenLimitPlaced(addressez, async (event) => console.log(`${new Date()}::OpenLimitPlaced event received ${JSON.stringify(event)}`));
       await sleep(sleepMs);
     },
   });
@@ -339,7 +326,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       for (var i = 0; i < MAX_TRADES; i++) {
         const oraclePrice = await gtrade.getOraclePrice(pair);
         log.info(`${i}. Opening trade on ${pair}, oraclePrice: ${oraclePrice}, size: ${size}, dir: ${dir}, tp: ${takeProfit}, sl: ${stopLoss}`);
-        await gtrade.issueMarketTrade(pair, size, leverage, dir as any, takeProfit, stopLoss);
+        await gtrade.issueMarketTrade(pair, size, leverage, oraclePrice, dir as any, 0, takeProfit, stopLoss);
 
         // validate 1 trade exists
         for (var j = 0; j < MAX_WAITS; j++) {
@@ -384,7 +371,6 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       closeAllTrades,
       subscribeTradingEvents,
       subscribeAggregatorEvents,
-      subscribeOpenLimitPlaced,
       getPrice,
       perpetualOpenClose,
     },

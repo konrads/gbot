@@ -2,10 +2,9 @@ export type Dir = "buy" | "sell";
 
 ///// gains events
 export interface MarketOrderInitiated {
-  orderId: number;
+  orderId: number; // gains: why not index???...
   trader: string;
-  pairIndex?: number;
-  pair?: string;
+  pairIndex: number;
   open: boolean;
 }
 

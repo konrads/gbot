@@ -1,4 +1,5 @@
 import fs from "fs";
+import { Trade } from "./gtrade";
 
 export function schedule(closure: () => void, interval: number): NodeJS.Timer {
   // call first time
@@ -49,11 +50,27 @@ export function range(n: number): number[] {
   return [...Array(n).keys()];
 }
 
-export function shortPubkey(pubkey: string): string {
-  const i0 = 0;
-  const i1 = 5;
-  const i2 = pubkey.length - 4;
-  const i3 = pubkey.length;
-  if (i2 > i1) return `${pubkey.slice(i0, i1)}...${pubkey.slice(i2, i3)}`;
-  else return pubkey;
+// For a single trade - return that trade.
+// For multiple trades, sum up positionSizeDai: positionSizeDai * leverage * dir, convert leverage to 1, set buy based on positionSizeDai
+export function aggregateTrades(trades: Trade[]): Trade {
+  return trades.reduce((x, y) => {
+    if (!x) return y;
+    else {
+      const xPosition = x.positionSizeDai * x.leverage * (x.buy ? 1 : -1);
+      const yPosition = y.positionSizeDai * y.leverage * (y.buy ? 1 : -1);
+      const positionSizeDai = xPosition + yPosition;
+      const buy = positionSizeDai > 0;
+      const leverage = 1;
+      return { ...x, positionSizeDai: Math.abs(positionSizeDai), buy, leverage };
+    }
+  }, undefined);
+}
+
+export function translateError(error): any {
+  const asStr = `${error}`;
+  const knownErrors = ["Transaction has been reverted by the EVM"];
+  for (var knownError of knownErrors) {
+    if (asStr.includes(knownError)) return knownError;
+  }
+  return error;
 }
