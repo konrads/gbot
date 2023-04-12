@@ -94,3 +94,11 @@ npm run pm2-start
 pm2 logs
 # open http://3.80.119.255/dashboard for dashboard
 ```
+
+## Operation details
+
+Adhere to following guidelines:
+
+- gbot operates on trades index 0 - expect it to be closed if opened manually. Ideally - do not open trades manually at all.
+- gbot triggers on periodic schedule and certain WS events. Note, to keep the logic simple, WS events cause the same update as per schedule
+- should WS block and not recover/error - gbot relies on periodic schedules only

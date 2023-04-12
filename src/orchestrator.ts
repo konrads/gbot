@@ -13,7 +13,7 @@ interface AssetState {
 }
 
 const MAX_WAIT_RETRIES = 10;
-const WAIT_SLEEP_MS = 1000;
+const WAIT_SLEEP_MS = 1_000;
 const MIN_POSITION_SIZE = 900;
 
 export class Orchestrator {
@@ -137,10 +137,6 @@ export class Orchestrator {
       if (events.length > 0) await Promise.all(events.map(async (x) => await this._handleEvent(x)));
       this._snapshotCnt += 1;
     });
-  }
-
-  async handleEvent(event: { pair: string; dir?: Dir; open: boolean }) {
-    return await this.mutex.runExclusive(async () => await this._handleEvent(event));
   }
 
   private async _handleEvent(event: { pair: string; dir?: Dir; open: boolean }) {

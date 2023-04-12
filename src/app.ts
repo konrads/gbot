@@ -9,8 +9,8 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
-const INTERVAL_MS = 30 * 1000;
-const WS_UPDATE_DELAY_MS = 5000;
+const INTERVAL_MS = 30_000;
+const WS_UPDATE_DELAY_MS = 5_000;
 
 async function main() {
   const config = loadConfig();
