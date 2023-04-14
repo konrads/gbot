@@ -7,10 +7,10 @@
     "telegramChatId": "-873100380"
   },
   "assetMappings": [
-    { "asset": "BTC", "cashAmount": 100, "leverage": 15 },
-    { "asset": "ETH", "cashAmount": 100, "leverage": 15 },
-    { "asset": "SOL", "cashAmount": 100, "leverage": 15 },
-    { "asset": "APT", "cashAmount": 100, "leverage": 15 }
+    { "asset": "BTC", "cashAmount": 500, "leverage": 3 },
+    { "asset": "ETH", "cashAmount": 500, "leverage": 3 },
+    { "asset": "SOL", "cashAmount": 500, "leverage": 3 },
+    { "asset": "APT", "cashAmount": 500, "leverage": 3 }
   ],
   "monitoredTrader": "0x6526f030Ede4Fe6A4d861C7c5823E47022cFb7bA"
 }
