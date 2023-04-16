@@ -28,7 +28,8 @@
       "properties": {
         "asset": {"type": "string"},
         "cashAmount": {"type": "number", "minimum": 0},
-        "leverage": {"type": "number", "minimum": 0}
+        "leverage": {"type": "number", "minimum": 0},
+        "trailingStoploss": {"type": "number", "minimum": 0, "maximum": 1}
       },
       "required": ["asset", "cashAmount", "leverage"]
     },

@@ -7,11 +7,11 @@
     "telegramChatId": "-873100380"
   },
   "assetMappings": [
-    { "asset": "btc", "cashAmount": 500, "leverage": 3 },
-    { "asset": "eth", "cashAmount": 500, "leverage": 3 },
-    { "asset": "link", "cashAmount": 500, "leverage": 3 },
-    { "asset": "matic", "cashAmount": 500, "leverage": 3 },
-    { "asset": "eurusd", "cashAmount": 500, "leverage": 3 }
+    { "asset": "btc", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "eth", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "link", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "matic", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "eurusd", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 }
   ],
   "monitoredTrader": "0x6526f030Ede4Fe6A4d861C7c5823E47022cFb7bA"
 }

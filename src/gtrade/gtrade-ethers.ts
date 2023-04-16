@@ -143,10 +143,10 @@ export class GTrade {
     size: number,
     leverage: number,
     dir: Dir,
-    takeProfit?: number,
-    stopLoss?: number,
     tradeIndex: number = 0,
-    slippage: number = 0.01
+    slippage: number = 0.01,
+    takeProfit?: number,
+    stopLoss?: number
   ): Promise<[number, ethers.providers.TransactionReceipt]> {
     const oraclePrice = await this.getOraclePrice(pair);
     let price: number;
@@ -160,7 +160,7 @@ export class GTrade {
       default:
         throw new Error(`Invalid dir ${dir}`);
     }
-    return [oraclePrice, await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage)];
+    return [oraclePrice, await this.issueTrade(pair, size, price, leverage, dir, tradeIndex, slippage, takeProfit, stopLoss)];
   }
 
   async issueTrade(
@@ -169,10 +169,10 @@ export class GTrade {
     price: number,
     leverage: number,
     dir: Dir,
-    takeProfit?: number,
-    stopLoss?: number,
     tradeIndex: number = 0,
-    slippage: number = 0.01
+    slippage: number = 0.01,
+    takeProfit?: number,
+    stopLoss?: number
   ): Promise<ethers.providers.TransactionReceipt> {
     const pairIndex = this.chainSpec.pairs.find((x) => x.pair == pair).index;
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);

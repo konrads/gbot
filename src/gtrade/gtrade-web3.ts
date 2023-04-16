@@ -148,9 +148,9 @@ export class GTrade {
     leverage: number,
     dir: Dir,
     tradeIndex: number,
+    slippage: number = 0.05,
     takeProfit?: number,
-    stopLoss?: number,
-    slippage: number = 0.05
+    stopLoss?: number
   ): Promise<any> {
     let price: number;
     switch (dir) {
@@ -163,7 +163,7 @@ export class GTrade {
       default:
         throw new Error(`Invalid dir ${dir}`);
     }
-    return await this.issueTrade(pair, size, price, leverage, dir, takeProfit, stopLoss, tradeIndex, slippage);
+    return await this.issueTrade(pair, size, price, leverage, dir, tradeIndex, slippage, takeProfit, stopLoss);
   }
 
   async issueTrade(
@@ -172,10 +172,10 @@ export class GTrade {
     price: number,
     leverage: number,
     dir: Dir,
-    takeProfit?: number,
-    stopLoss?: number,
     tradeIndex: number = 0,
-    slippage: number = 0.01
+    slippage: number = 0.01,
+    takeProfit?: number,
+    stopLoss?: number
   ): Promise<any> {
     const pairIndex = this.chainSpec.pairs.find((x) => x.pair == pair).index;
     if (pairIndex < 0) throw new Error(`Invalid pair ${pair}`);

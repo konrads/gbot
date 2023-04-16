@@ -11,6 +11,7 @@ export interface AssetMapping {
   asset: string;
   cashAmount: number;
   leverage: number;
+  trailingStoploss?: number; // optional, defaults to 1 = 100%
 }
 
 export interface Config {

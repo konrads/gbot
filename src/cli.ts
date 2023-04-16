@@ -168,7 +168,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       const config = loadConfig();
       console.log(`Issuing trade as ${config.wallet.address}`);
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
-      const receipt = await gtrade.issueTrade(pair, size, price, leverage, dir as "buy" | "sell", takeProfit, stopLoss, orderIndex, slippage);
+      const receipt = await gtrade.issueTrade(pair, size, price, leverage, dir as "buy" | "sell", orderIndex, slippage, takeProfit, stopLoss);
       log.info(`issueTrade status ${receipt.status}, hash ${receipt.transactionHash}`);
     },
   });
@@ -214,7 +214,7 @@ openTradeCounts: ${[...(await gtrade.getOpenTradeCounts()).entries()].map(([k, v
       console.log(`Issuing trade as ${config.wallet.address}`);
       const gtrade = new GTrade(config.wallet.privateKey, getChainSpec((chain as any) ?? config.listenerChainSpec));
       const oraclePrice = await gtrade.getOraclePrice(pair);
-      const receipt = await gtrade.issueMarketTrade(pair, size, oraclePrice, leverage, dir as "buy" | "sell", orderIndex, takeProfit, stopLoss, slippage);
+      const receipt = await gtrade.issueMarketTrade(pair, size, oraclePrice, leverage, dir as "buy" | "sell", orderIndex, slippage, takeProfit, stopLoss);
       log.info(`issueMarketTrade status ${receipt.status}, hash ${receipt.transactionHash}, openPrice ${oraclePrice}`);
     },
   });

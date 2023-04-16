@@ -39,4 +39,5 @@ export interface LedgerTrade {
   openTs: Date;
   closePrice?: number;
   closeTs?: Date;
+  boundaryPrice: number;
 }
