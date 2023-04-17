@@ -22,8 +22,6 @@ export class Notifier {
         }),
       });
       log.debug(`Response for telegram POST ${JSON.stringify(resp)}`);
-    } else {
-      log.debug(`Failed to publish the message due to undefined telegramChatId/telegramToken`);
     }
   }
 }
