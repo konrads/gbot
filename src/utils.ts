@@ -68,7 +68,7 @@ export function aggregateTrades(trades: Trade[]): Trade {
 
 export function translateError(error): any {
   const asStr = `${error}`;
-  const knownErrors = [`Transaction has been reverted by the EVM`, `CONNECTION ERROR: Couldn't connect to node on WS`];
+  const knownErrors = [`Transaction has been reverted by the EVM`, `CONNECTION ERROR: Couldn't connect to node on WS`, "connection not open on send()"];
   for (var knownError of knownErrors) {
     if (asStr.includes(knownError)) return knownError;
   }
