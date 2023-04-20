@@ -2,7 +2,7 @@ import Web3 from "web3";
 import { Contract } from "web3-eth-contract";
 import { ChainSpec, Trade } from ".";
 import { CouldNotCloseTrade, Dir, MarketOrderInitiated, OpenLimitPlaced, PriceReceived } from "../types";
-import { range, sleep, translateError } from "../utils";
+import { range, translateError } from "../utils";
 import { ERC20_ABI, STORAGE_ABI, TRADING_ABI, PRICE_AGGREGATOR_ABI, AGGREGATOR_PROXY_ABI } from "./abi";
 import { log } from "../log";
 

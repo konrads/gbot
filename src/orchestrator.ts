@@ -73,7 +73,7 @@ export class Orchestrator {
       const allPairs = this.config.assetMappings.map((x) => x.asset);
       // work with trades with lowest index per pair
       const myTrades = (await Promise.all(allPairs.map(async (p) => (await this.gtrader.getOpenTrades(p)).filter(({ index }) => index == 0)))).flat();
-      const myPairs = unique([...this.assetStates.keys(), ...monitoredTrades.map((x) => x.pair), ...myTrades.map((x) => x.pair)]);
+      const myPairs = unique([...monitoredTrades.map((x) => x.pair), ...myTrades.map((x) => x.pair)]);
 
       // sync prices for most likely events. Note: could be smarter about this...
       const now = new Date();
