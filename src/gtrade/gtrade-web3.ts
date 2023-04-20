@@ -317,7 +317,7 @@ async function sendTxnWithRetry(txn, address: string, description: string) {
 
 // Enables execution of smart contract calls, with round robin rotation or rpc urls, failing on the last 1.
 // Should call succeed, rpcUrl index is kept for future reference.
-class Web3RoundRobin {
+export class Web3RoundRobin {
   readonly chainSpec: ChainSpec;
   private readonly privKey: string;
   private contexts: {
@@ -365,6 +365,7 @@ class Web3RoundRobin {
 
   async execute<T>(
     fn: (context: {
+      rpcUrl: string;
       wallet: any;
       web3: Web3;
       daiContract: Contract;
