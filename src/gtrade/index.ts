@@ -7,7 +7,7 @@ export interface ChainSpec {
   id: string;
   daiAddress: string;
   storageAddress: string;
-  rpcUrl: string;
+  rpcUrls: string[];
   pairs: { index: number; pair: string; aggregatorProxyAddress: string; decimals?: number }[];
 }
 

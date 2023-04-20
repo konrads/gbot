@@ -18,7 +18,7 @@ export class GTrade {
   constructor(privKey: string, chainSpec: ChainSpec, referrer: string = "0x0000000000000000000000000000000000000000") {
     this.chainSpec = chainSpec;
     this.referrer = referrer;
-    this.provider = new ethers.providers.WebSocketProvider(chainSpec.rpcUrl);
+    this.provider = new ethers.providers.WebSocketProvider(chainSpec.rpcUrls[0]); // FIXME: deprecated, only using the first for compilation purposes
     this.signer = new ethers.Wallet(privKey, this.provider);
     this.daiContract = new ethers.Contract(chainSpec.daiAddress, ERC20_ABI, this.signer);
     // this.daiContract2 = new Contract(ERC20_ABI, chainSpec.daiAddress);

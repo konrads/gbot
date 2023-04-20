@@ -9,7 +9,7 @@ import { Notifier } from "./notifications";
 import { GTrade, ChainSpec } from "./gtrade";
 import { getChainSpec } from "./gtrade/chainspec";
 
-const INTERVAL_MS = 30_000;
+const INTERVAL_MS = 60_000;
 const WS_UPDATE_DELAY_MS = 5_000;
 
 async function main() {
@@ -24,8 +24,10 @@ async function main() {
 `);
   const traderChainSpec: ChainSpec = getChainSpec(config.traderChainSpec);
   const gtrader = new GTrade(config.wallet.privateKey, traderChainSpec);
+  await gtrader.init();
   const listenerChainSpec: ChainSpec = getChainSpec(config.listenerChainSpec ?? config.traderChainSpec);
   const glistener = new GTrade(config.wallet.privateKey, listenerChainSpec);
+  await glistener.init();
   const notifier = new Notifier(config.notifications);
   const orchestrator = new Orchestrator(config, gtrader, notifier);
 
