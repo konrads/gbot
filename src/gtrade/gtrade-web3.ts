@@ -385,7 +385,10 @@ class Web3RoundRobin {
         if (canRetry && i < this.contexts.length - 1) {
           log.warn(`Failed web3 call on url ${context.rpcUrl}, retrying...\n${e}`);
           this.contextInd = (this.contextInd + 1) % this.contexts.length;
-        } else throw e;
+        } else {
+          log.warn(`Failed web3 call on url ${context.rpcUrl}, re-throwing...\n${e}`);
+          throw e;
+        }
       }
     }
   }
