@@ -382,7 +382,7 @@ class Web3RoundRobin {
         const retryErrors = [`Transaction has been reverted by the EVM`, `CONNECTION ERROR: Couldn't connect to node on WS`, "connection not open on send()"];
         const errorStr = `${e}`;
         const canRetry = retryErrors.find((x) => errorStr.includes(x)) != undefined;
-        if (canRetry && i < this.contexts.length) {
+        if (canRetry && i < this.contexts.length - 1) {
           log.warn(`Failed web3 call on url ${context.rpcUrl}, retrying...\n${e}`);
           this.contextInd = (this.contextInd + 1) % this.contexts.length;
         } else throw e;
