@@ -2,11 +2,16 @@ export type Dir = "buy" | "sell";
 
 ///// gains events
 export interface MarketOrderInitiated {
-  orderId: number;
+  orderId: number; // gains: why not index???...
   trader: string;
-  pairIndex?: number;
-  pair?: string;
+  pairIndex: number;
   open: boolean;
+}
+
+export interface OpenLimitPlaced {
+  trader: string;
+  pairIndex: number;
+  index: number;
 }
 
 export interface CouldNotCloseTrade {
@@ -34,4 +39,5 @@ export interface LedgerTrade {
   openTs: Date;
   closePrice?: number;
   closeTs?: Date;
+  boundaryPrice: number;
 }

@@ -1,5 +1,4 @@
 {
-  "closeTradesAtStart": true,
   "traderChainSpec": "mumbai",
   "listenerChainSpec": "arbitrum",
   "webServerPort": 80,
@@ -8,10 +7,11 @@
     "telegramChatId": "-873100380"
   },
   "assetMappings": [
-    { "asset": "BTC", "cashAmount": 100, "leverage": 15 },
-    { "asset": "ETH", "cashAmount": 100, "leverage": 15 },
-    { "asset": "SOL", "cashAmount": 100, "leverage": 15 },
-    { "asset": "APT", "cashAmount": 100, "leverage": 15 }
+    { "asset": "btc", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "eth", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "link", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "matic", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 },
+    { "asset": "eurusd", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.02 }
   ],
-  "monitoredTrader": "0x0A1822364DeA5F4eD18b6fC4C7bd38FCD8B83789"
+  "monitoredTrader": "0x6526f030Ede4Fe6A4d861C7c5823E47022cFb7bA"
 }

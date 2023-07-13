@@ -11,13 +11,12 @@ export interface AssetMapping {
   asset: string;
   cashAmount: number;
   leverage: number;
+  trailingStoploss?: number; // optional, defaults to 1 = 100%
 }
 
 export interface Config {
   traderChainSpec: "polygon" | "arbitrum" | "mumbai";
   listenerChainSpec: "polygon" | "arbitrum" | "mumbai";
-  closeTradesAtStart?: boolean;
-  mockParams?: MockParams;
   webServerPort: number;
   notifications?: Notifications;
   assetMappings: AssetMapping[];
@@ -25,15 +24,12 @@ export interface Config {
   wallet: Wallet;
 }
 
-export interface MockParams {
-  bogusTrader: string;
-}
-
 export function loadConfig(): Config {
   const config: Config = require("../config.json");
   const walletPrivKey = fs.readFileSync("./wallet.txt", "utf8").trim();
   config.wallet = new Wallet(walletPrivKey);
   validateSchema(config, require("../config.schema.json"));
+  if (config.wallet.address.toUpperCase() == config.monitoredTrader.toUpperCase()) throw new Error(`Cannot have my wallet.address == config.monitoredTrader!`);
   return config;
 }
 

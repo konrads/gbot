@@ -48,14 +48,17 @@ src/cli.ts closeAllTrades
 
 Following is my setup, guided by desire not to be limited by network bandwidth (suits websockets). Note: following assumes:
 
-- 18.214.16.179 is your ubuntu ec2 instance, with port 80 open
+- deploy on non-burstable instance with decent network bandwidth, to avoid issues with closed websockets
+  - https://aws.amazon.com/ec2/pricing/on-demand/
+  - https://www.densify.com/resources/ec2-instance-types/
+- 3.80.119.255 is your ubuntu ec2 instance, with port 80 open
 - `gbot.pem` aws keypair has created
 - `aws-deployment` priv key has been setup in github
 - `<my-pub-key>` = your wallet priv key, with appropriate funds for given chain
 
 ```shell
-scp ~/.ssh/aws-deployment ubuntu@18.214.16.179:~/.ssh
-ssh -i ~/.ssh/gbot.pem ubuntu@18.214.16.179
+scp -i ~/.ssh/gbot.pem ~/.ssh/aws-deployment ubuntu@3.80.119.255:~/.ssh
+ssh -i ~/.ssh/gbot.pem ubuntu@3.80.119.255
 # inside the ec2 terminal...
 # ensure we can clone from github
 chmod 400 ~/.ssh/aws-deployment
@@ -85,7 +88,22 @@ node_modules/.bin/ts-node src/cli.ts
 node_modules/.bin/ts-node src/cli.ts showKeys
 node_modules/.bin/ts-node src/cli.ts gTradeStats
 # start the server
-nohup node_modules/.bin/ts-node src/app.ts 2>&1 &
-tail -f nohup.out
-# open http://18.214.16.179/dashboard for dashboard
+npm run pm2-install
+npm run build
+npm run pm2-start
+pm2 logs
+# open http://3.80.119.255/dashboard for dashboard
 ```
+
+## Operation details
+
+Adhere to following guidelines:
+
+- gbot operates on trades index 0 - expect it to be closed if opened manually. Ideally - do not open trades manually at all.
+- gbot triggers on periodic schedule and certain WS events. Note, to keep the logic simple, WS events cause the same update as per schedule
+- should WS connection drop off and fail to recover - gbot will keep ticking on periodic schedules only
+- on restart following rules are abided by:
+  - if both positions exist in same dir - noop
+  - if my position exists but monitored doesn't - mine is closed (on trade 0)
+  - if both positions exist, but in opposite dirs - mine is cancelled (and subsequently re-opened to rebalance)
+  - if monitored position exists and mine doesn't - I don't know when monitored was opened - will wait for it to re-open

@@ -1,5 +1,6 @@
 import * as assert from "assert";
-import { unique, groupBy, toFixed } from "../src/utils";
+import { Trade } from "../src/gtrade";
+import { unique, groupBy, toFixed, aggregateTrades } from "../src/utils";
 
 describe("utils", function () {
   it("unique", function () {
@@ -43,5 +44,29 @@ describe("utils", function () {
 
     x = 0.001;
     assert.strictEqual(0, toFixed(x, 2));
+  });
+
+  it("aggregateTrades", function () {
+    const t0: Trade = {
+      positionSizeDai: 10,
+      buy: true,
+      leverage: 5,
+      // can ignore...
+      trader: "0x111",
+      pair: "btc",
+      index: 0,
+      openPrice: -1,
+      initialPosToken: -1,
+      tp: -1,
+      sl: -1,
+    };
+    const t1: Trade = { ...t0, positionSizeDai: 20, leverage: 4, buy: false };
+    const t2: Trade = { ...t0, positionSizeDai: 30, leverage: 3, buy: true };
+    let res = aggregateTrades([t0]);
+    assert.deepEqual([10, 5, true], [res.positionSizeDai, res.leverage, res.buy]); // returns t0
+    res = aggregateTrades([t0, t1]);
+    assert.deepEqual([30, 1, false], [res.positionSizeDai, res.leverage, res.buy]); // falls into sell
+    res = aggregateTrades([t0, t1, t2]);
+    assert.deepEqual([60, 1, true], [res.positionSizeDai, res.leverage, res.buy]); // falls back into buy
   });
 });

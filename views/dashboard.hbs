@@ -11,11 +11,11 @@
     </style>
 </head>
 <body>
-    <h2>Assets</h2>
+    <h2>Pairs</h2>
     <table>
-        <tr><th></th>{{#each assets}}<th><strong>{{asset}}</strong></th>{{/each}}</tr>
-        <tr><td><strong>Price</strong></td>{{#each assets}}<td><div class="currency">{{cash price}}</div></td>{{/each}}</tr>
-        <tr><td><strong>Updated</strong></td>{{#each assets}}<td>{{ts}}</td>{{/each}}</tr>
+        <tr><th></th>{{#each pairs}}<th><strong>{{pair}}</strong></th>{{/each}}</tr>
+        <tr><td><strong>Price</strong></td>{{#each pairs}}<td><div class="currency">{{cash price}}</div></td>{{/each}}</tr>
+        <tr><td><strong>Updated</strong></td>{{#each pairs}}<td>{{ts}}</td>{{/each}}</tr>
     </table>
 
     <h2>My trades</h2>
@@ -34,6 +34,10 @@
     *Trader chain spec: {{traderChainSpec}}
     <br></br>
     *Listener chain spec: {{listenerChainSpec}}
+    <br></br>
+    *Snapshot {{snapshotCnt}}, blockedToOpen: {{blockedToOpen}}
+    <br></br>
+    *Health  check {{healthCheck}}
     <br></br>
     *Timestamped @ {{now}}, refreshed every {{refresh}}s
 </body>

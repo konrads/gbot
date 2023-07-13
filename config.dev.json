@@ -1,19 +1,13 @@
 {
-  "closeTradesAtStart": true,
   "traderChainSpec": "mumbai",
   "listenerChainSpec": "mumbai",
   "webServerPort": 80,
-  "notifications": {
-    "telegramToken": "6061483132:AAEWsTgKshHuS1xmRV0TqnZf3zhPl0so_EY",
-    "telegramChatId": "-873100380"
-  },
   "assetMappings": [
-    { "asset": "btc", "cashAmount": 500, "leverage": 3 },
-    { "asset": "eth", "cashAmount": 500, "leverage": 3 },
-    { "asset": "link", "cashAmount": 500, "leverage": 3 },
-    { "asset": "matic", "cashAmount": 500, "leverage": 3 },
-    { "asset": "eurusd", "cashAmount": 500, "leverage": 3 }
+    { "asset": "btc", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.005 },
+    { "asset": "eth", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.005 },
+    { "asset": "link", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.005 },
+    { "asset": "matic", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.005 },
+    { "asset": "eurusd", "cashAmount": 500, "leverage": 3, "trailingStoploss": 0.005 }
   ],
-  "monitoredTrader": "0x844e3749100549a67F046F4fd051b1Fa87b29892",
-  "mockParams": { "bogusTrader": "bogus-trader" }
+  "monitoredTrader": "0x0A1822364DeA5F4eD18b6fC4C7bd38FCD8B83789"
 }

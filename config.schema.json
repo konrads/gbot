@@ -2,10 +2,8 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "properties": {
-    "closeTradesAtStart": {"type": "boolean"},
     "traderChainSpec": {"$ref": "#/definitions/ChainSpec"},
     "listenerChainSpec": {"$ref": "#/definitions/ChainSpec"},
-    "mockParams": {"$ref": "#/definitions/MockParams"},
     "webServerPort": {"type": "integer"},
     "notifications": {"$ref": "#/definitions/NotificationDetails"},
     "assetMappings": {
@@ -30,16 +28,10 @@
       "properties": {
         "asset": {"type": "string"},
         "cashAmount": {"type": "number", "minimum": 0},
-        "leverage": {"type": "number", "minimum": 0}
+        "leverage": {"type": "number", "minimum": 0},
+        "trailingStoploss": {"type": "number", "minimum": 0, "maximum": 1}
       },
       "required": ["asset", "cashAmount", "leverage"]
-    },
-    "MockParams": {
-      "type": "object",
-      "properties": {
-        "bogusTrader": {"type": "string"}
-      },
-      "required": ["bogusTrader"]
     },
     "ChainSpec": {
       "type": "string",

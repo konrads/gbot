@@ -4,5 +4,6 @@ config.json
 wallet*.txt
 restart-cnt.txt
 tmp
+dist
 *.bk
 *.log

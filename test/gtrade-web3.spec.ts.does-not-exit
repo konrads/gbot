@@ -1,0 +1,40 @@
+import * as assert from "assert";
+import { Web3RoundRobin } from "../src/gtrade/gtrade-web3";
+import { MUMBAI_SPEC } from "../src/gtrade/chainspec";
+
+describe("gtrade-web3", function () {
+  it("Web3RoundRobin", async () => {
+    const web3RR = new Web3RoundRobin("5676ca6dc3843a5c3d2bfadc66376b85ac717e1986cb1e2814ad16dcb8569616", MUMBAI_SPEC);
+    await web3RR.init();
+    assert.strictEqual(2, MUMBAI_SPEC.rpcUrls.length);
+
+    let rpcUrls: string[] = [];
+    // expect 1 try from success
+    await web3RR.execute(async (ctx) => rpcUrls.push(ctx.rpcUrl));
+    assert.strictEqual(1, rpcUrls.length);
+
+    // expect 1 retry and a error thrown
+    rpcUrls = [];
+    try {
+      await web3RR.execute(async (ctx) => {
+        rpcUrls.push(ctx.rpcUrl);
+        throw new Error("UNKNOWN ERROR - fail fast");
+      });
+      assert.fail("unexpected success on error");
+    } catch (e) {
+      assert.strictEqual(1, rpcUrls.length);
+    }
+
+    // expect 2 retries and a error thrown
+    rpcUrls = [];
+    try {
+      await web3RR.execute(async (ctx) => {
+        rpcUrls.push(ctx.rpcUrl);
+        throw new Error("connection not open on send()");
+      });
+      assert.fail("unexpected success on error");
+    } catch (e) {
+      assert.strictEqual(2, rpcUrls.length);
+    }
+  });
+});
